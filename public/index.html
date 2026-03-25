@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UltraProgol · Liga MX</title>
+  <meta name="description" content="La plataforma definitiva de pronósticos Progol para la Liga MX. Datos en tiempo real, tabla de posiciones, goleadores y más." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <!-- Background -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#" class="nav-logo">
+        <span class="logo-icon">⚽</span>
+        <span class="logo-text">Ultra<span class="accent">Progol</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#progol" class="nav-link active" data-tab="progol">Progol</a></li>
+        <li><a href="#tabla" class="nav-link" data-tab="tabla">Tabla</a></li>
+        <li><a href="#goleadores" class="nav-link" data-tab="goleadores">Goleadores</a></li>
+        <li><a href="#calendario" class="nav-link" data-tab="calendario">Calendario</a></li>
+      </ul>
+      <div class="nav-badge">
+        <span class="pulse-dot"></span>
+        <span>Liga MX EN VIVO</span>
+      </div>
+      <button class="hamburger" id="hamburger" aria-label="Menú">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Mobile Menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <ul>
+      <li><a href="#progol" class="nav-link" data-tab="progol">⚽ Progol</a></li>
+      <li><a href="#tabla" class="nav-link" data-tab="tabla">📊 Tabla</a></li>
+      <li><a href="#goleadores" class="nav-link" data-tab="goleadores">🥅 Goleadores</a></li>
+      <li><a href="#calendario" class="nav-link" data-tab="calendario">📅 Calendario</a></li>
+    </ul>
+  </div>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero-content">
+      <div class="hero-tag">Clausura 2025 · Jornada en curso</div>
+      <h1 class="hero-title">
+        Tu Quiniela<br /><span class="gradient-text">Progol</span>
+      </h1>
+      <p class="hero-subtitle">Predice los resultados de la Liga MX con datos en tiempo real. Consulta la tabla, goleadores y arma tu quiniela perfecta.</p>
+      <div class="hero-cta">
+        <button class="btn-primary" id="heroBtn">Hacer Pronósticos</button>
+        <button class="btn-secondary" id="heroBtnTabla">Ver Tabla</button>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <span class="stat-num" id="statEquipos">18</span>
+          <span class="stat-label">Equipos</span>
+        </div>
+        <div class="hero-stat">
+          <span class="stat-num" id="statJornada">—</span>
+          <span class="stat-label">Jornada</span>
+        </div>
+        <div class="hero-stat">
+          <span class="stat-num" id="statGoles">—</span>
+          <span class="stat-label">Goles</span>
+        </div>
+        <div class="hero-stat">
+          <span class="stat-num" id="statLider">—</span>
+          <span class="stat-label">Líder</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="field-graphic">
+        <div class="field-lines"></div>
+        <div class="field-circle"></div>
+        <div class="field-center"></div>
+        <div class="ball-anim">⚽</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- TAB: PROGOL -->
+    <section class="tab-section active" id="tab-progol">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">🎯 Tu Progol</h2>
+          <p class="section-subtitle">Selecciona tu pronóstico para cada partido: <strong>1</strong> Local, <strong>X</strong> Empate, <strong>2</strong> Visitante</p>
+        </div>
+        <div class="progol-actions">
+          <button class="btn-outline" id="clearProgol">Limpiar</button>
+          <button class="btn-primary" id="saveProgol">Guardar Quiniela</button>
+        </div>
+      </div>
+
+      <div id="progolMatches" class="progol-grid">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Cargando partidos...</p>
+        </div>
+      </div>
+
+      <!-- Summary card -->
+      <div class="progol-summary" id="progolSummary" style="display:none">
+        <div class="summary-header">
+          <h3>📋 Resumen de tu Quiniela</h3>
+          <button class="summary-close" id="summaryClose">✕</button>
+        </div>
+        <div id="summaryContent" class="summary-grid"></div>
+        <div class="summary-footer">
+          <button class="btn-primary" id="copyProgol">📋 Copiar Quiniela</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: TABLA -->
+    <section class="tab-section" id="tab-tabla">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">📊 Tabla General</h2>
+          <p class="section-subtitle" id="tablaFuente">Liga MX · Clausura 2025</p>
+        </div>
+        <div class="legend-zona">
+          <span class="zona-dot liguilla"></span><span>Liguilla</span>
+          <span class="zona-dot repechaje"></span><span>Repechaje</span>
+          <span class="zona-dot descenso"></span><span>Descenso</span>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="standings-table" id="standingsTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Equipo</th>
+              <th>PJ</th>
+              <th>PG</th>
+              <th>PE</th>
+              <th>PP</th>
+              <th>GF</th>
+              <th>GC</th>
+              <th>DIF</th>
+              <th>PTS</th>
+            </tr>
+          </thead>
+          <tbody id="standingsBody">
+            <tr><td colspan="10" class="loading-cell"><div class="spinner"></div> Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB: GOLEADORES -->
+    <section class="tab-section" id="tab-goleadores">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">🥅 Tabla de Goleadores</h2>
+          <p class="section-subtitle">Los máximos anotadores del torneo</p>
+        </div>
+      </div>
+      <div id="goleadoresGrid" class="goleadores-grid">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Cargando goleadores...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: CALENDARIO -->
+    <section class="tab-section" id="tab-calendario">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">📅 Calendario</h2>
+          <p class="section-subtitle">Próximos partidos de la Liga MX</p>
+        </div>
+      </div>
+      <div id="calendarioContent">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Cargando calendario...</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-logo">
+        <span class="logo-icon">⚽</span>
+        <span>Ultra<span class="accent">Progol</span></span>
+      </div>
+      <p class="footer-text">Datos en tiempo real proporcionados por <a href="https://ultragol-api-3.vercel.app" target="_blank">UltraGol API</a></p>
+      <p class="footer-copy">© 2025 UltraProgol · Liga MX · Todos los derechos reservados</p>
+    </div>
+  </footer>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
