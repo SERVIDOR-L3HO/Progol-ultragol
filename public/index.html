@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UltraProgol · Liga MX</title>
-  <meta name="description" content="La plataforma definitiva de pronósticos Progol para la Liga MX. Datos en tiempo real, tabla de posiciones, goleadores y más." />
+  <meta name="description" content="La plataforma definitiva de pronósticos Progol para la Liga MX." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -12,209 +12,329 @@
 </head>
 <body>
 
-  <!-- Background -->
-  <div class="bg-orbs">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
+  <!-- ==================== LOGIN OVERLAY ==================== -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-bg-orbs">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+    </div>
+    <div class="login-card">
+      <div class="login-brand">
+        <span class="logo-icon">⚽</span>
+        <span class="login-logo-text">Ultra<span class="accent">Progol</span></span>
+      </div>
+      <p class="login-subtitle">Liga MX · Quiniela Oficial</p>
+
+      <!-- Auth tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab-btn active" data-tab="login">Iniciar Sesión</button>
+        <button class="auth-tab-btn" data-tab="register">Registrarse</button>
+      </div>
+
+      <!-- Error message -->
+      <div class="auth-error" id="authError" style="display:none"></div>
+
+      <!-- LOGIN PANEL -->
+      <div class="auth-tab-panel active" id="tab-login">
+        <form id="loginForm" autocomplete="on">
+          <div class="form-group">
+            <label class="form-label">Correo electrónico</label>
+            <input id="loginEmail" type="email" class="form-input" placeholder="tucorreo@ejemplo.com" required autocomplete="email" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contraseña</label>
+            <div class="input-password-wrap">
+              <input id="loginPassword" type="password" class="form-input" placeholder="••••••••" required autocomplete="current-password" />
+              <button type="button" class="toggle-pw" onclick="togglePw('loginPassword',this)">👁</button>
+            </div>
+          </div>
+          <button type="submit" class="auth-submit-btn btn-primary" data-label="Entrar">Entrar</button>
+        </form>
+        <p class="auth-switch">¿No tienes cuenta? <a href="#" onclick="switchAuthTab('register')">Regístrate</a></p>
+      </div>
+
+      <!-- REGISTER PANEL -->
+      <div class="auth-tab-panel" id="tab-register">
+        <form id="registerForm" autocomplete="on">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Nombre(s)</label>
+              <input id="regNombre" type="text" class="form-input" placeholder="Juan" required autocomplete="given-name" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Apellidos</label>
+              <input id="regApellidos" type="text" class="form-input" placeholder="García López" required autocomplete="family-name" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Correo electrónico</label>
+            <input id="regEmail" type="email" class="form-input" placeholder="tucorreo@ejemplo.com" required autocomplete="email" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Contraseña</label>
+              <div class="input-password-wrap">
+                <input id="regPassword" type="password" class="form-input" placeholder="Min. 6 caracteres" required autocomplete="new-password" />
+                <button type="button" class="toggle-pw" onclick="togglePw('regPassword',this)">👁</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirmar</label>
+              <div class="input-password-wrap">
+                <input id="regConfirm" type="password" class="form-input" placeholder="Repite la contraseña" required autocomplete="new-password" />
+                <button type="button" class="toggle-pw" onclick="togglePw('regConfirm',this)">👁</button>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="auth-submit-btn btn-primary" data-label="Crear cuenta">Crear cuenta</button>
+        </form>
+        <p class="auth-switch">¿Ya tienes cuenta? <a href="#" onclick="switchAuthTab('login')">Inicia sesión</a></p>
+      </div>
+    </div>
   </div>
 
-  <!-- Navbar -->
-  <nav class="navbar" id="navbar">
-    <div class="nav-container">
-      <a href="#" class="nav-logo">
-        <span class="logo-icon">⚽</span>
-        <span class="logo-text">Ultra<span class="accent">Progol</span></span>
-      </a>
-      <ul class="nav-links">
-        <li><a href="#progol" class="nav-link active" data-tab="progol">Progol</a></li>
-        <li><a href="#tabla" class="nav-link" data-tab="tabla">Tabla</a></li>
-        <li><a href="#goleadores" class="nav-link" data-tab="goleadores">Goleadores</a></li>
-        <li><a href="#calendario" class="nav-link" data-tab="calendario">Calendario</a></li>
+  <!-- ==================== MAIN APP ==================== -->
+  <div id="mainApp" style="display:none">
+
+    <!-- Background -->
+    <div class="bg-orbs">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+      <div class="nav-container">
+        <a href="#" class="nav-logo">
+          <span class="logo-icon">⚽</span>
+          <span class="logo-text">Ultra<span class="accent">Progol</span></span>
+        </a>
+        <ul class="nav-links">
+          <li><a href="#" class="nav-link active" data-tab="progol">Progol</a></li>
+          <li><a href="#" class="nav-link" data-tab="tabla">Tabla</a></li>
+          <li><a href="#" class="nav-link" data-tab="goleadores">Goleadores</a></li>
+          <li><a href="#" class="nav-link" data-tab="calendario">Calendario</a></li>
+          <li class="admin-only" style="display:none"><a href="#" class="nav-link nav-link-admin" data-tab="admin">🔐 Admin</a></li>
+        </ul>
+        <div class="nav-user">
+          <span class="user-name-display"></span>
+          <button class="btn-logout" onclick="logout()">Salir</button>
+        </div>
+        <div class="nav-badge">
+          <span class="pulse-dot"></span>
+          <span>Liga MX EN VIVO</span>
+        </div>
+        <button class="hamburger" id="hamburger" aria-label="Menú">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+      <div class="mobile-user">
+        <span class="user-name-display"></span>
+        <button class="btn-logout-mobile" onclick="logout()">Cerrar sesión</button>
+      </div>
+      <ul>
+        <li><a href="#" class="nav-link" data-tab="progol">⚽ Progol</a></li>
+        <li><a href="#" class="nav-link" data-tab="tabla">📊 Tabla</a></li>
+        <li><a href="#" class="nav-link" data-tab="goleadores">🥅 Goleadores</a></li>
+        <li><a href="#" class="nav-link" data-tab="calendario">📅 Calendario</a></li>
+        <li class="admin-only" style="display:none"><a href="#" class="nav-link" data-tab="admin">🔐 Admin</a></li>
       </ul>
-      <div class="nav-badge">
-        <span class="pulse-dot"></span>
-        <span>Liga MX EN VIVO</span>
-      </div>
-      <button class="hamburger" id="hamburger" aria-label="Menú">
-        <span></span><span></span><span></span>
-      </button>
     </div>
-  </nav>
 
-  <!-- Mobile Menu -->
-  <div class="mobile-menu" id="mobileMenu">
-    <ul>
-      <li><a href="#progol" class="nav-link" data-tab="progol">⚽ Progol</a></li>
-      <li><a href="#tabla" class="nav-link" data-tab="tabla">📊 Tabla</a></li>
-      <li><a href="#goleadores" class="nav-link" data-tab="goleadores">🥅 Goleadores</a></li>
-      <li><a href="#calendario" class="nav-link" data-tab="calendario">📅 Calendario</a></li>
-    </ul>
-  </div>
-
-  <!-- Hero -->
-  <header class="hero">
-    <div class="hero-content">
-      <div class="hero-tag">Clausura 2025 · Jornada en curso</div>
-      <h1 class="hero-title">
-        Tu Quiniela<br /><span class="gradient-text">Progol</span>
-      </h1>
-      <p class="hero-subtitle">Predice los resultados de la Liga MX con datos en tiempo real. Consulta la tabla, goleadores y arma tu quiniela perfecta.</p>
-      <div class="hero-cta">
-        <button class="btn-primary" id="heroBtn">Hacer Pronósticos</button>
-        <button class="btn-secondary" id="heroBtnTabla">Ver Tabla</button>
-      </div>
-      <div class="hero-stats">
-        <div class="hero-stat">
-          <span class="stat-num" id="statEquipos">18</span>
-          <span class="stat-label">Equipos</span>
+    <!-- Hero -->
+    <header class="hero">
+      <div class="hero-content">
+        <div class="hero-tag">Clausura 2025 · Jornada en curso</div>
+        <h1 class="hero-title">
+          Tu Quiniela<br /><span class="gradient-text">Progol</span>
+        </h1>
+        <p class="hero-subtitle">Predice los resultados de la Liga MX con datos en tiempo real. Consulta la tabla, goleadores y arma tu quiniela perfecta.</p>
+        <div class="hero-cta">
+          <button class="btn-primary" id="heroBtn">Hacer Pronósticos</button>
+          <button class="btn-secondary" id="heroBtnTabla">Ver Tabla</button>
         </div>
-        <div class="hero-stat">
-          <span class="stat-num" id="statJornada">—</span>
-          <span class="stat-label">Jornada</span>
-        </div>
-        <div class="hero-stat">
-          <span class="stat-num" id="statGoles">—</span>
-          <span class="stat-label">Goles</span>
-        </div>
-        <div class="hero-stat">
-          <span class="stat-num" id="statLider">—</span>
-          <span class="stat-label">Líder</span>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span class="stat-num" id="statEquipos">18</span>
+            <span class="stat-label">Equipos</span>
+          </div>
+          <div class="hero-stat">
+            <span class="stat-num" id="statJornada">—</span>
+            <span class="stat-label">Jornada</span>
+          </div>
+          <div class="hero-stat">
+            <span class="stat-num" id="statGoles">—</span>
+            <span class="stat-label">Goles</span>
+          </div>
+          <div class="hero-stat">
+            <span class="stat-num" id="statLider">—</span>
+            <span class="stat-label">Líder</span>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="hero-visual">
-      <div class="field-graphic">
-        <div class="field-lines"></div>
-        <div class="field-circle"></div>
-        <div class="field-center"></div>
-        <div class="ball-anim">⚽</div>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main Content -->
-  <main class="main-content">
-
-    <!-- TAB: PROGOL -->
-    <section class="tab-section active" id="tab-progol">
-      <div class="section-header">
-        <div>
-          <h2 class="section-title">🎯 Tu Progol</h2>
-          <p class="section-subtitle">Selecciona tu pronóstico: <span class="pill pill-l">L</span> Local &nbsp;·&nbsp; <span class="pill pill-e">E</span> Empate &nbsp;·&nbsp; <span class="pill pill-v">V</span> Visitante</p>
-        </div>
-        <div class="progol-actions">
-          <button class="btn-outline" id="clearProgol">Limpiar</button>
-          <button class="btn-primary" id="saveProgol">Guardar Quiniela</button>
+      <div class="hero-visual">
+        <div class="field-graphic">
+          <div class="field-lines"></div>
+          <div class="field-circle"></div>
+          <div class="field-center"></div>
+          <div class="ball-anim">⚽</div>
         </div>
       </div>
+    </header>
 
-      <div id="progolMatches" class="progol-grid">
-        <div class="loading-state">
-          <div class="spinner"></div>
-          <p>Cargando partidos...</p>
-        </div>
-      </div>
+    <!-- Main Content -->
+    <main class="main-content">
 
-      <!-- Summary card -->
-      <div class="progol-summary" id="progolSummary" style="display:none">
-        <div class="summary-header">
-          <h3>📋 Resumen de tu Quiniela</h3>
-          <button class="summary-close" id="summaryClose">✕</button>
+      <!-- TAB: PROGOL -->
+      <section class="tab-section active" id="tab-progol">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">🎯 Tu Progol</h2>
+            <p class="section-subtitle">Selecciona tu pronóstico: <span class="pill pill-l">L</span> Local &nbsp;·&nbsp; <span class="pill pill-e">E</span> Empate &nbsp;·&nbsp; <span class="pill pill-v">V</span> Visitante</p>
+          </div>
+          <div class="progol-actions">
+            <button class="btn-outline" id="clearProgol">Limpiar</button>
+            <button class="btn-primary" id="saveProgol">Guardar Quiniela</button>
+          </div>
         </div>
-        <div id="summaryContent" class="summary-grid"></div>
-        <div class="summary-footer">
-          <button class="btn-primary" id="copyProgol">📋 Copiar Quiniela</button>
+        <div id="progolMatches" class="progol-grid">
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Cargando partidos...</p>
+          </div>
         </div>
-      </div>
-    </section>
+        <div class="progol-summary" id="progolSummary" style="display:none">
+          <div class="summary-header">
+            <h3>📋 Resumen de tu Quiniela</h3>
+            <button class="summary-close" id="summaryClose">✕</button>
+          </div>
+          <div id="summaryContent" class="summary-grid"></div>
+          <div class="summary-footer">
+            <button class="btn-primary" id="copyProgol">📋 Copiar Quiniela</button>
+          </div>
+        </div>
+      </section>
 
-    <!-- TAB: TABLA -->
-    <section class="tab-section" id="tab-tabla">
-      <div class="section-header">
-        <div>
-          <h2 class="section-title">📊 Tabla General</h2>
-          <p class="section-subtitle" id="tablaFuente">Liga MX · Clausura 2025</p>
+      <!-- TAB: TABLA -->
+      <section class="tab-section" id="tab-tabla">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">📊 Tabla General</h2>
+            <p class="section-subtitle" id="tablaFuente">Liga MX · Clausura 2025</p>
+          </div>
+          <div class="legend-zona">
+            <span class="zona-dot liguilla"></span><span>Liguilla</span>
+            <span class="zona-dot repechaje"></span><span>Repechaje</span>
+            <span class="zona-dot descenso"></span><span>Descenso</span>
+          </div>
         </div>
-        <div class="legend-zona">
-          <span class="zona-dot liguilla"></span><span>Liguilla</span>
-          <span class="zona-dot repechaje"></span><span>Repechaje</span>
-          <span class="zona-dot descenso"></span><span>Descenso</span>
+        <div class="table-wrapper">
+          <table class="standings-table" id="standingsTable">
+            <thead>
+              <tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DIF</th><th>PTS</th></tr>
+            </thead>
+            <tbody id="standingsBody">
+              <tr><td colspan="10" class="loading-cell"><div class="spinner"></div> Cargando...</td></tr>
+            </tbody>
+          </table>
         </div>
-      </div>
+      </section>
 
-      <div class="table-wrapper">
-        <table class="standings-table" id="standingsTable">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Equipo</th>
-              <th>PJ</th>
-              <th>PG</th>
-              <th>PE</th>
-              <th>PP</th>
-              <th>GF</th>
-              <th>GC</th>
-              <th>DIF</th>
-              <th>PTS</th>
-            </tr>
-          </thead>
-          <tbody id="standingsBody">
-            <tr><td colspan="10" class="loading-cell"><div class="spinner"></div> Cargando...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- TAB: GOLEADORES -->
-    <section class="tab-section" id="tab-goleadores">
-      <div class="section-header">
-        <div>
-          <h2 class="section-title">🥅 Tabla de Goleadores</h2>
-          <p class="section-subtitle">Los máximos anotadores del torneo</p>
+      <!-- TAB: GOLEADORES -->
+      <section class="tab-section" id="tab-goleadores">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">🥅 Tabla de Goleadores</h2>
+            <p class="section-subtitle">Los máximos anotadores del torneo</p>
+          </div>
         </div>
-      </div>
-      <div id="goleadoresGrid" class="goleadores-grid">
-        <div class="loading-state">
-          <div class="spinner"></div>
-          <p>Cargando goleadores...</p>
+        <div id="goleadoresGrid" class="goleadores-grid">
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Cargando goleadores...</p>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- TAB: CALENDARIO -->
-    <section class="tab-section" id="tab-calendario">
-      <div class="section-header">
-        <div>
-          <h2 class="section-title">📅 Calendario</h2>
-          <p class="section-subtitle">Próximos partidos de la Liga MX</p>
+      <!-- TAB: CALENDARIO -->
+      <section class="tab-section" id="tab-calendario">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">📅 Calendario</h2>
+            <p class="section-subtitle">Próximos partidos de la Liga MX</p>
+          </div>
         </div>
-      </div>
-      <div id="calendarioContent">
-        <div class="loading-state">
-          <div class="spinner"></div>
-          <p>Cargando calendario...</p>
+        <div id="calendarioContent">
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Cargando calendario...</p>
+          </div>
         </div>
+      </section>
+
+      <!-- TAB: ADMIN -->
+      <section class="tab-section" id="tab-admin">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">🔐 Panel de Administrador</h2>
+            <p class="section-subtitle">Quinielas registradas y estado de los participantes</p>
+          </div>
+          <button class="btn-primary" id="refreshAdmin" onclick="window.loadAdminData()">🔄 Actualizar</button>
+        </div>
+        <div id="adminContent">
+          <div class="no-matches">
+            <div class="emoji">🔐</div>
+            <h3>Panel de Admin</h3>
+            <p>Haz clic en "Actualizar" para cargar las quinielas.</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-container">
+        <div class="footer-logo">
+          <span class="logo-icon">⚽</span>
+          <span>Ultra<span class="accent">Progol</span></span>
+        </div>
+        <p class="footer-text">Datos en tiempo real por <a href="https://ultragol-api-3.vercel.app" target="_blank">UltraGol API</a></p>
+        <p class="footer-copy">© 2025 UltraProgol · Liga MX</p>
       </div>
-    </section>
+    </footer>
 
-  </main>
+  </div><!-- /mainApp -->
 
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="footer-container">
-      <div class="footer-logo">
-        <span class="logo-icon">⚽</span>
-        <span>Ultra<span class="accent">Progol</span></span>
-      </div>
-      <p class="footer-text">Datos en tiempo real proporcionados por <a href="https://ultragol-api-3.vercel.app" target="_blank">UltraGol API</a></p>
-      <p class="footer-copy">© 2025 UltraProgol · Liga MX · Todos los derechos reservados</p>
-    </div>
-  </footer>
-
-  <!-- Toast Notification -->
+  <!-- Toast -->
   <div class="toast" id="toast"></div>
 
+  <!-- Firebase Compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <!-- App Scripts -->
   <script src="/js/app.js"></script>
+  <script src="/js/firebase-app.js"></script>
+
+  <script>
+    function togglePw(id, btn) {
+      const inp = document.getElementById(id);
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+      btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+    }
+    function switchAuthTab(tab) {
+      document.querySelectorAll('.auth-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.auth-tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelector(`.auth-tab-btn[data-tab="${tab}"]`).classList.add('active');
+      document.getElementById(`tab-${tab}`).classList.add('active');
+    }
+  </script>
 </body>
 </html>

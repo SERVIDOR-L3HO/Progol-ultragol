@@ -89,12 +89,15 @@ function teamLogoHTML(name, size = 'md') {
   return `<div class="team-logo-wrap ${cls}"><span class="logo-fallback" style="background:${color}">${abbr}</span></div>`;
 }
 
-/* ---- STATE ---- */
-let progolPicks = {}; // { matchId: 'L'|'E'|'V' }
+/* ---- STATE (global so firebase-app.js can access) ---- */
+window.TEAM_ESPN_IDS = TEAM_ESPN_IDS; // expose for admin scoring
+window.progolPicks = {};
+let progolPicks = window.progolPicks;
 let tablaData = [];
 let goleadoresData = [];
 let calendarioData = [];
 let matchesForProgol = [];
+window.matchesForProgol = matchesForProgol;
 
 /* ---- DOM HELPERS ---- */
 const $ = id => document.getElementById(id);
@@ -333,6 +336,7 @@ function buildProgolMatches(calendario, tablaJson) {
       { id:8, local:'Querétaro', visitante:'Santos Laguna', jornada:'13', hora:'20:00', fecha:'' },
     ];
   }
+  window.matchesForProgol = matchesForProgol;
   renderProgolMatches(container, matchesForProgol);
 }
 
@@ -381,6 +385,7 @@ function renderProgolMatches(container, matches) {
 
 window.setPick = function(matchId, pick, btn) {
   progolPicks[matchId] = pick;
+  window.progolPicks[matchId] = pick;
   const card = $(`card-${matchId}`);
   if (!card) return;
   card.querySelectorAll('.progol-btn').forEach(b => b.classList.remove('active-l', 'active-e', 'active-v'));
@@ -394,18 +399,28 @@ window.setPick = function(matchId, pick, btn) {
 
 /* ---- SAVE / CLEAR / SUMMARY ---- */
 function initProgolActions() {
-  $('saveProgol').addEventListener('click', () => {
+  $('saveProgol').addEventListener('click', async () => {
     const filled = Object.keys(progolPicks).length;
     if (filled === 0) { showToast('⚠️ Selecciona al menos un resultado'); return; }
     renderSummary();
     $('progolSummary').style.display = 'block';
     $('progolSummary').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     const total = matchesForProgol.length;
-    showToast(filled < total ? `📋 Quiniela guardada (${filled}/${total} partidos)` : '🏆 ¡Quiniela completa guardada!');
+    // Save to Firestore if authenticated
+    if (typeof window.saveQuinielaToFirestore === 'function') {
+      const ok = await window.saveQuinielaToFirestore(progolPicks, matchesForProgol);
+      if (ok) {
+        showToast(filled < total ? `☁️ Quiniela guardada (${filled}/${total} partidos)` : '🏆 ¡Quiniela completa guardada!');
+      } else {
+        showToast(filled < total ? `📋 Quiniela lista (${filled}/${total}) — verifica tu conexión` : '🏆 ¡Quiniela lista!');
+      }
+    } else {
+      showToast(filled < total ? `📋 Quiniela lista (${filled}/${total} partidos)` : '🏆 ¡Quiniela completa!');
+    }
   });
 
   $('clearProgol').addEventListener('click', () => {
-    progolPicks = {};
+    progolPicks = {}; window.progolPicks = {};
     document.querySelectorAll('.progol-btn').forEach(b => b.classList.remove('active-l', 'active-e', 'active-v'));
     document.querySelectorAll('.progol-card').forEach(c => c.classList.remove('selected'));
     $('progolSummary').style.display = 'none';
