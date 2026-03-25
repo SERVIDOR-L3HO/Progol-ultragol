@@ -3,62 +3,97 @@
    ======================================== */
 
 const API = 'https://ultragol-api-3.vercel.app';
+const ESPN_LOGO = slug => `https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/${slug}.png&h=100&w=100`;
 
-/* ---- TEAM COLORS ---- */
+/* ---- TEAM DATA ---- */
 const TEAM_COLORS = {
-  'Chivas': '#ff0000', 'Guadalajara': '#ff0000',
-  'Cruz Azul': '#003087',
+  'Chivas': '#cc0000', 'Guadalajara': '#cc0000',
+  'Cruz Azul': '#1a3a6e',
   'Toluca': '#c8102e',
-  'Pumas': '#003087', 'Pumas UNAM': '#003087',
-  'Pachuca': '#011e4c',
-  'Atlas': '#c8102e',
+  'Pumas': '#003566', 'Pumas UNAM': '#003566',
+  'Pachuca': '#10234d',
+  'Atlas': '#8b0000',
   'Tigres': '#f9a01b', 'Tigres UANL': '#f9a01b',
-  'Club América': '#ffdd00', 'América': '#ffdd00',
-  'Monterrey': '#003087',
-  'Juárez': '#f7941d', 'FC Juarez': '#f7941d',
-  'Necaxa': '#ee1c25',
-  'León': '#006629',
-  'Tijuana': '#000000',
+  'Club América': '#c8a900', 'América': '#c8a900',
+  'Monterrey': '#1a2d6e',
+  'Juárez': '#e07b00', 'FC Juarez': '#e07b00',
+  'Necaxa': '#c8102e',
+  'León': '#005c1e',
+  'Tijuana': '#222222',
   'Puebla': '#003087',
-  'San Luis': '#ff0000', 'Atlético de San Luis': '#ff0000',
-  'Mazatlán': '#002366',
+  'San Luis': '#cc0000', 'Atlético de San Luis': '#cc0000',
+  'Mazatlán': '#002a6e', 'Mazatlán FC': '#002a6e',
   'Querétaro': '#003087',
-  'Santos Laguna': '#018a18', 'Santos': '#018a18',
+  'Santos Laguna': '#017a30', 'Santos': '#017a30',
+};
+
+/* ESPN slugs for logo images */
+const TEAM_SLUGS = {
+  'Chivas': 'chivas', 'Guadalajara': 'chivas',
+  'Cruz Azul': 'cruz-azul',
+  'Toluca': 'toluca',
+  'Pumas': 'pumas', 'Pumas UNAM': 'pumas',
+  'Pachuca': 'pachuca',
+  'Atlas': 'atlas',
+  'Tigres': 'tigres', 'Tigres UANL': 'tigres',
+  'Club América': 'america', 'América': 'america',
+  'Monterrey': 'monterrey',
+  'Juárez': 'fc-juarez', 'FC Juarez': 'fc-juarez',
+  'Necaxa': 'necaxa',
+  'León': 'leon',
+  'Tijuana': 'tijuana',
+  'Puebla': 'puebla',
+  'San Luis': 'atletico-de-san-luis', 'Atlético de San Luis': 'atletico-de-san-luis',
+  'Mazatlán': 'mazatlan', 'Mazatlán FC': 'mazatlan',
+  'Querétaro': 'queretaro',
+  'Santos Laguna': 'santos-laguna', 'Santos': 'santos-laguna',
 };
 
 const TEAM_ABBR = {
   'Chivas': 'GDL', 'Guadalajara': 'GDL',
-  'Cruz Azul': 'CRZ',
-  'Toluca': 'TOL',
+  'Cruz Azul': 'CRZ', 'Toluca': 'TOL',
   'Pumas': 'PUM', 'Pumas UNAM': 'PUM',
-  'Pachuca': 'PAC',
-  'Atlas': 'ATL',
+  'Pachuca': 'PAC', 'Atlas': 'ATL',
   'Tigres': 'TIG', 'Tigres UANL': 'TIG',
   'Club América': 'AME', 'América': 'AME',
-  'Monterrey': 'MTY',
-  'Juárez': 'JUA', 'FC Juarez': 'JUA',
-  'Necaxa': 'NEC',
-  'León': 'LEO',
-  'Tijuana': 'TIJ',
-  'Puebla': 'PUE',
-  'San Luis': 'SLP', 'Atlético de San Luis': 'SLP',
-  'Mazatlán': 'MAZ',
-  'Querétaro': 'QRO',
-  'Santos Laguna': 'SAN', 'Santos': 'SAN',
+  'Monterrey': 'MTY', 'Juárez': 'JUA', 'FC Juarez': 'JUA',
+  'Necaxa': 'NEC', 'León': 'LEO', 'Tijuana': 'TIJ',
+  'Puebla': 'PUE', 'San Luis': 'SLP', 'Atlético de San Luis': 'SLP',
+  'Mazatlán': 'MAZ', 'Mazatlán FC': 'MAZ',
+  'Querétaro': 'QRO', 'Santos Laguna': 'SAN', 'Santos': 'SAN',
 };
 
-function getTeamColor(name) {
-  return TEAM_COLORS[name] || '#374151';
-}
+/* Logos loaded from API (populated at runtime) */
+let LOGOS_MAP = {};
+
+function getTeamColor(name) { return TEAM_COLORS[name] || '#374151'; }
 function getTeamAbbr(name) {
   if (TEAM_ABBR[name]) return TEAM_ABBR[name];
   const words = name.split(' ');
-  if (words.length === 1) return name.substring(0, 3).toUpperCase();
-  return words.slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  return words.length === 1 ? name.substring(0, 3).toUpperCase() : words.slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
+function getTeamLogo(name) {
+  if (LOGOS_MAP[name]) return LOGOS_MAP[name];
+  const slug = TEAM_SLUGS[name];
+  return slug ? ESPN_LOGO(slug) : null;
+}
+
+/* Render a team logo image with fallback colored badge */
+function teamLogoHTML(name, size = 'md') {
+  const logo = getTeamLogo(name);
+  const color = getTeamColor(name);
+  const abbr = getTeamAbbr(name);
+  const cls = size === 'sm' ? 'team-logo-sm' : size === 'lg' ? 'team-logo-lg' : 'team-logo-md';
+  if (logo) {
+    return `<div class="team-logo-wrap ${cls}" style="--fallback:${color}">
+      <img src="${logo}" alt="${name}" class="team-logo-img" onerror="this.parentElement.innerHTML='<span class=\\'logo-fallback\\' style=\\'background:${color}\\'>${abbr}</span>'">
+    </div>`;
+  }
+  return `<div class="team-logo-wrap ${cls}"><span class="logo-fallback" style="background:${color}">${abbr}</span></div>`;
 }
 
 /* ---- STATE ---- */
-let progolPicks = {}; // { matchId: '1'|'X'|'2' }
+let progolPicks = {}; // { matchId: 'L'|'E'|'V' }
 let tablaData = [];
 let goleadoresData = [];
 let calendarioData = [];
@@ -75,42 +110,31 @@ function showToast(msg, duration = 2800) {
 
 /* ---- NAVIGATION ---- */
 function initNav() {
-  const links = document.querySelectorAll('.nav-link[data-tab]');
-  links.forEach(link => {
+  document.querySelectorAll('.nav-link[data-tab]').forEach(link => {
     link.addEventListener('click', e => {
       e.preventDefault();
-      const tab = link.dataset.tab;
-      switchTab(tab);
-      // close mobile menu
+      switchTab(link.dataset.tab);
       $('mobileMenu').classList.remove('open');
     });
   });
-
   $('heroBtn').addEventListener('click', () => switchTab('progol'));
   $('heroBtnTabla').addEventListener('click', () => switchTab('tabla'));
-  $('hamburger').addEventListener('click', () => {
-    $('mobileMenu').classList.toggle('open');
-  });
-
+  $('hamburger').addEventListener('click', () => $('mobileMenu').classList.toggle('open'));
   window.addEventListener('scroll', () => {
-    const nav = $('navbar');
-    if (window.scrollY > 10) nav.classList.add('scrolled');
-    else nav.classList.remove('scrolled');
+    $('navbar').classList.toggle('scrolled', window.scrollY > 10);
   });
 }
 
 function switchTab(tab) {
-  // Hide all sections
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-  // Show target
   const section = $(`tab-${tab}`);
   if (section) section.classList.add('active');
   document.querySelectorAll(`.nav-link[data-tab="${tab}"]`).forEach(l => l.classList.add('active'));
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ---- FETCH HELPERS ---- */
+/* ---- FETCH ---- */
 async function fetchData(endpoint) {
   try {
     const res = await fetch(`${API}${endpoint}`);
@@ -122,13 +146,22 @@ async function fetchData(endpoint) {
   }
 }
 
-/* ---- LOAD ALL DATA ---- */
+/* ---- LOAD ALL ---- */
 async function loadAll() {
-  const [tabla, goleadores, calendario] = await Promise.all([
+  const [logos, tabla, goleadores, calendario] = await Promise.all([
+    fetchData('/logos'),
     fetchData('/tabla'),
     fetchData('/goleadores'),
     fetchData('/calendario'),
   ]);
+
+  /* Cache logos from API */
+  if (logos && logos.logos) {
+    logos.logos.forEach(l => {
+      if (l.equipo && l.logo_mediano) LOGOS_MAP[l.equipo] = l.logo_mediano;
+      if (l.equipo && l.logo) LOGOS_MAP[l.equipo] = l.logo_mediano || l.logo;
+    });
+  }
 
   if (tabla) {
     tablaData = tabla.tabla || [];
@@ -152,12 +185,9 @@ async function loadAll() {
 function updateHeroStats(tablaJson) {
   if (!tablaJson) return;
   const tabla = tablaJson.tabla || [];
-  // Total goles
   const totalGF = tabla.reduce((s, t) => s + (t.estadisticas?.gf || 0), 0) / 2;
   $('statGoles').textContent = Math.round(totalGF);
-  // Líder
   if (tabla.length > 0) $('statLider').textContent = getTeamAbbr(tabla[0].equipo);
-  // Jornada
   $('statJornada').textContent = tablaJson.jornadasTotales || '—';
 }
 
@@ -168,26 +198,20 @@ function renderTabla(tabla, updated) {
     tbody.innerHTML = '<tr><td colspan="10" class="loading-cell">Sin datos disponibles</td></tr>';
     return;
   }
-  if (updated) {
-    $('tablaFuente').textContent = `Liga MX · Actualizado: ${formatDate(updated)}`;
-  }
-  tbody.innerHTML = tabla.map((team, idx) => {
+  if (updated) $('tablaFuente').textContent = `Liga MX · Actualizado: ${formatDate(updated)}`;
+
+  tbody.innerHTML = tabla.map(team => {
     const pos = team.posicion;
     const s = team.estadisticas || {};
-    const zoneClass =
-      pos <= 8 ? 'zone-liguilla' :
-      pos <= 12 ? 'zone-repechaje' :
-      pos >= 17 ? 'zone-descenso' : '';
+    const zoneClass = pos <= 8 ? 'zone-liguilla' : pos <= 12 ? 'zone-repechaje' : pos >= 17 ? 'zone-descenso' : '';
     const dif = s.dif >= 0 ? `+${s.dif}` : s.dif;
     const difClass = s.dif > 0 ? 'dif-pos' : s.dif < 0 ? 'dif-neg' : '';
-    const color = getTeamColor(team.equipo);
-    const abbr = getTeamAbbr(team.equipo);
     return `
       <tr class="${zoneClass}">
         <td class="pos">${pos}</td>
         <td>
           <div class="team-cell">
-            <div class="team-mini-badge" style="background:${color};">${abbr}</div>
+            ${teamLogoHTML(team.equipo, 'sm')}
             <span class="team-name-cell">${team.equipo}</span>
           </div>
         </td>
@@ -213,16 +237,16 @@ function renderGoleadores(goleadores) {
   grid.innerHTML = goleadores.map(g => {
     const pos = g.posicion;
     const rankClass = pos === 1 ? 'rank-1' : pos === 2 ? 'rank-2' : pos === 3 ? 'rank-3' : '';
-    const color = getTeamColor(g.equipo);
-    const initials = g.jugador.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
     const trophyLabel = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
+    const initials = g.jugador.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
+    const color = getTeamColor(g.equipo);
     return `
       <div class="goleador-card">
         <div class="goleador-rank ${rankClass}">${pos}</div>
         <div class="goleador-avatar" style="background:${color};">${initials}</div>
         <div class="goleador-info">
           <div class="goleador-name">${trophyLabel} ${g.jugador}</div>
-          <div class="goleador-team">${g.equipo}</div>
+          <div class="goleador-team">${teamLogoHTML(g.equipo, 'sm')} ${g.equipo}</div>
         </div>
         <div class="goleador-goals">
           <div class="goals-num">${g.goles}</div>
@@ -240,23 +264,20 @@ function renderCalendario(calendario) {
       <div class="no-matches">
         <div class="emoji">📅</div>
         <h3>Sin partidos disponibles</h3>
-        <p>El calendario no tiene partidos disponibles en este momento.<br/>Vuelve más tarde para ver los próximos encuentros.</p>
+        <p>El calendario no tiene partidos en este momento.<br>Vuelve más tarde para ver los próximos encuentros.</p>
       </div>`;
     return;
   }
-  // Group by jornada
   const jornadas = {};
-  calendario.forEach(match => {
-    const j = match.jornada || 'Próximos';
+  calendario.forEach(m => {
+    const j = m.jornada || 'Próximos';
     if (!jornadas[j]) jornadas[j] = [];
-    jornadas[j].push(match);
+    jornadas[j].push(m);
   });
-  container.innerHTML = Object.entries(jornadas).map(([jornada, matches]) => `
+  container.innerHTML = Object.entries(jornadas).map(([j, matches]) => `
     <div class="jornada-section">
-      <div class="jornada-title">Jornada ${jornada}</div>
-      <div class="calendario-grid">
-        ${matches.map(m => renderCalMatch(m)).join('')}
-      </div>
+      <div class="jornada-title">Jornada ${j}</div>
+      <div class="calendario-grid">${matches.map(m => renderCalMatch(m)).join('')}</div>
     </div>`).join('');
 }
 
@@ -265,39 +286,33 @@ function renderCalMatch(m) {
   const visitante = m.visitante || m.equipo_visitante || 'Visitante';
   const marcador = m.marcador || null;
   const estado = m.estado || m.status || 'próximo';
-  const colorL = getTeamColor(local);
-  const colorV = getTeamColor(visitante);
-  const abbrL = getTeamAbbr(local);
-  const abbrV = getTeamAbbr(visitante);
-
-  let statusBadge = '';
   let scores = '<span class="cal-dash">vs</span>';
-
   if (marcador && (marcador.local !== undefined || marcador.goles_local !== undefined)) {
     const gl = marcador.local ?? marcador.goles_local ?? '-';
     const gv = marcador.visitante ?? marcador.goles_visitante ?? '-';
     scores = `<span class="cal-score">${gl}</span><span class="cal-dash">-</span><span class="cal-score">${gv}</span>`;
   }
-
-  const estadoLower = (estado || '').toLowerCase();
-  if (estadoLower.includes('viv') || estadoLower.includes('live') || estadoLower.includes("'")) {
+  const est = (estado || '').toLowerCase();
+  let statusBadge = '';
+  if (est.includes('viv') || est.includes('live') || est.includes("'")) {
     statusBadge = `<span class="cal-status status-live">⚡ EN VIVO</span>`;
-  } else if (estadoLower.includes('fin') || estadoLower.includes('term') || estadoLower.includes('ft')) {
+  } else if (est.includes('fin') || est.includes('term') || est.includes('ft')) {
     statusBadge = `<span class="cal-status status-finished">FT</span>`;
   } else {
-    const hora = m.hora || m.time || '';
-    statusBadge = `<span class="cal-status status-upcoming">${hora || 'Próximo'}</span>`;
+    statusBadge = `<span class="cal-status status-upcoming">${m.hora || m.time || 'Próximo'}</span>`;
   }
-
   return `
     <div class="cal-card">
       <div class="cal-team">
-        <div class="team-mini-badge" style="background:${colorL};">${abbrL}</div>
+        ${teamLogoHTML(local, 'sm')}
         <span class="cal-team-name">${local}</span>
       </div>
-      <div class="cal-score-box">${scores}</div>
+      <div class="cal-center">
+        <div class="cal-score-box">${scores}</div>
+        ${statusBadge}
+      </div>
       <div class="cal-team away">
-        <div class="team-mini-badge" style="background:${colorV};">${abbrV}</div>
+        ${teamLogoHTML(visitante, 'sm')}
         <span class="cal-team-name">${visitante}</span>
       </div>
     </div>`;
@@ -306,77 +321,40 @@ function renderCalMatch(m) {
 /* ---- PROGOL ---- */
 function buildProgolMatches(calendario, tablaJson) {
   const container = $('progolMatches');
-
-  // Try to get matches from calendario
   if (calendario && calendario.length > 0) {
-    // Take upcoming or current jornada matches
     matchesForProgol = calendario.slice(0, 14).map((m, i) => ({
       id: i,
       local: m.local || m.equipo_local || `Equipo ${i * 2 + 1}`,
       visitante: m.visitante || m.equipo_visitante || `Equipo ${i * 2 + 2}`,
-      jornada: m.jornada || '—',
-      hora: m.hora || m.time || '',
-      fecha: m.fecha || '',
+      jornada: m.jornada || '—', hora: m.hora || m.time || '', fecha: m.fecha || '',
     }));
   } else if (tablaJson && tablaJson.tabla && tablaJson.tabla.length >= 2) {
-    // Generate simulated matches from current standings
     const equipos = tablaJson.tabla.map(t => t.equipo);
-    matchesForProgol = generateProgolFromStandings(equipos);
+    matchesForProgol = [[0,17],[1,16],[2,15],[3,14],[4,13],[5,12],[6,11],[7,10],[8,9]]
+      .map((pair, i) => ({ id: i, local: equipos[pair[0]] || `Equipo ${pair[0]+1}`, visitante: equipos[pair[1]] || `Equipo ${pair[1]+1}`, jornada: '13', hora: '', fecha: '' }));
   } else {
-    // Fallback default matches
-    matchesForProgol = getDefaultMatches();
+    matchesForProgol = [
+      { id:0, local:'Chivas', visitante:'Cruz Azul', jornada:'13', hora:'17:00', fecha:'' },
+      { id:1, local:'Toluca', visitante:'Pumas UNAM', jornada:'13', hora:'19:00', fecha:'' },
+      { id:2, local:'Pachuca', visitante:'Atlas', jornada:'13', hora:'19:00', fecha:'' },
+      { id:3, local:'Tigres UANL', visitante:'Club América', jornada:'13', hora:'21:00', fecha:'' },
+      { id:4, local:'Monterrey', visitante:'Necaxa', jornada:'13', hora:'21:00', fecha:'' },
+      { id:5, local:'León', visitante:'FC Juarez', jornada:'13', hora:'17:00', fecha:'' },
+      { id:6, local:'Tijuana', visitante:'Puebla', jornada:'13', hora:'18:00', fecha:'' },
+      { id:7, local:'Atlético de San Luis', visitante:'Mazatlán FC', jornada:'13', hora:'20:00', fecha:'' },
+      { id:8, local:'Querétaro', visitante:'Santos Laguna', jornada:'13', hora:'20:00', fecha:'' },
+    ];
   }
-
   renderProgolMatches(container, matchesForProgol);
-}
-
-function generateProgolFromStandings(equipos) {
-  const fixtures = [
-    [0, 17], [1, 16], [2, 15], [3, 14],
-    [4, 13], [5, 12], [6, 11], [7, 10],
-    [8, 9],
-  ];
-  return fixtures.map((pair, i) => ({
-    id: i,
-    local: equipos[pair[0]] || `Equipo ${pair[0] + 1}`,
-    visitante: equipos[pair[1]] || `Equipo ${pair[1] + 1}`,
-    jornada: '13',
-    hora: '',
-    fecha: '',
-  }));
-}
-
-function getDefaultMatches() {
-  return [
-    { id: 0, local: 'Chivas', visitante: 'Cruz Azul', jornada: '13', hora: '17:00', fecha: '' },
-    { id: 1, local: 'Toluca', visitante: 'Pumas', jornada: '13', hora: '19:00', fecha: '' },
-    { id: 2, local: 'Pachuca', visitante: 'Atlas', jornada: '13', hora: '19:00', fecha: '' },
-    { id: 3, local: 'Tigres', visitante: 'Club América', jornada: '13', hora: '21:00', fecha: '' },
-    { id: 4, local: 'Monterrey', visitante: 'Necaxa', jornada: '13', hora: '21:00', fecha: '' },
-    { id: 5, local: 'León', visitante: 'Juárez', jornada: '13', hora: '17:00', fecha: '' },
-    { id: 6, local: 'Tijuana', visitante: 'Puebla', jornada: '13', hora: '18:00', fecha: '' },
-    { id: 7, local: 'San Luis', visitante: 'Mazatlán', jornada: '13', hora: '20:00', fecha: '' },
-    { id: 8, local: 'Querétaro', visitante: 'Santos Laguna', jornada: '13', hora: '20:00', fecha: '' },
-  ];
 }
 
 function renderProgolMatches(container, matches) {
   if (!matches || matches.length === 0) {
-    container.innerHTML = `
-      <div class="no-matches" style="grid-column:1/-1">
-        <div class="emoji">📋</div>
-        <h3>Sin partidos cargados</h3>
-        <p>No hay partidos disponibles para la quiniela en este momento.</p>
-      </div>`;
+    container.innerHTML = `<div class="no-matches" style="grid-column:1/-1"><div class="emoji">📋</div><h3>Sin partidos</h3><p>No hay partidos disponibles ahora.</p></div>`;
     return;
   }
-
   container.innerHTML = matches.map((match, idx) => {
-    const colorL = getTeamColor(match.local);
-    const colorV = getTeamColor(match.visitante);
-    const abbrL = getTeamAbbr(match.local);
-    const abbrV = getTeamAbbr(match.visitante);
-    const hora = match.hora ? `${match.hora}` : '';
+    const hora = match.hora || '';
     const dateStr = match.fecha ? ` · ${match.fecha}` : '';
     return `
       <div class="progol-card" id="card-${match.id}">
@@ -386,19 +364,28 @@ function renderProgolMatches(container, matches) {
         </div>
         <div class="match-teams">
           <div class="match-team">
-            <div class="team-badge" style="background:${colorL};">${abbrL}</div>
+            ${teamLogoHTML(match.local, 'lg')}
             <span class="team-name">${match.local}</span>
           </div>
           <div class="match-vs">VS</div>
           <div class="match-team">
-            <div class="team-badge" style="background:${colorV};">${abbrV}</div>
+            ${teamLogoHTML(match.visitante, 'lg')}
             <span class="team-name">${match.visitante}</span>
           </div>
         </div>
         <div class="progol-btns">
-          <button class="progol-btn" data-match="${match.id}" data-pick="1" onclick="setPick(${match.id},'1',this)">1</button>
-          <button class="progol-btn" data-match="${match.id}" data-pick="X" onclick="setPick(${match.id},'X',this)">X</button>
-          <button class="progol-btn" data-match="${match.id}" data-pick="2" onclick="setPick(${match.id},'2',this)">2</button>
+          <button class="progol-btn btn-l" data-match="${match.id}" data-pick="L" onclick="setPick(${match.id},'L',this)">
+            <span class="btn-pick-label">L</span>
+            <span class="btn-pick-sub">Local</span>
+          </button>
+          <button class="progol-btn btn-e" data-match="${match.id}" data-pick="E" onclick="setPick(${match.id},'E',this)">
+            <span class="btn-pick-label">E</span>
+            <span class="btn-pick-sub">Empate</span>
+          </button>
+          <button class="progol-btn btn-v" data-match="${match.id}" data-pick="V" onclick="setPick(${match.id},'V',this)">
+            <span class="btn-pick-label">V</span>
+            <span class="btn-pick-sub">Visita</span>
+          </button>
         </div>
       </div>`;
   }).join('');
@@ -406,19 +393,13 @@ function renderProgolMatches(container, matches) {
 
 window.setPick = function(matchId, pick, btn) {
   progolPicks[matchId] = pick;
-  // Update button styles in that card
   const card = $(`card-${matchId}`);
   if (!card) return;
-  card.querySelectorAll('.progol-btn').forEach(b => {
-    b.classList.remove('active-1', 'active-x', 'active-2');
-  });
-  const cls = pick === '1' ? 'active-1' : pick === 'X' ? 'active-x' : 'active-2';
+  card.querySelectorAll('.progol-btn').forEach(b => b.classList.remove('active-l', 'active-e', 'active-v'));
+  const cls = pick === 'L' ? 'active-l' : pick === 'E' ? 'active-e' : 'active-v';
   btn.classList.add(cls);
   card.classList.add('selected');
-  // Check completion
-  const total = matchesForProgol.length;
-  const filled = Object.keys(progolPicks).length;
-  if (filled === total) {
+  if (Object.keys(progolPicks).length === matchesForProgol.length) {
     showToast('🎯 ¡Quiniela completa! Guárdala para verla.');
   }
 };
@@ -426,69 +407,57 @@ window.setPick = function(matchId, pick, btn) {
 /* ---- SAVE / CLEAR / SUMMARY ---- */
 function initProgolActions() {
   $('saveProgol').addEventListener('click', () => {
-    const total = matchesForProgol.length;
     const filled = Object.keys(progolPicks).length;
-    if (filled === 0) {
-      showToast('⚠️ Selecciona al menos un resultado');
-      return;
-    }
+    if (filled === 0) { showToast('⚠️ Selecciona al menos un resultado'); return; }
     renderSummary();
     $('progolSummary').style.display = 'block';
     $('progolSummary').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    if (filled < total) {
-      showToast(`📋 Quiniela guardada (${filled}/${total} partidos)`);
-    } else {
-      showToast('🏆 Quiniela completa guardada!');
-    }
+    const total = matchesForProgol.length;
+    showToast(filled < total ? `📋 Quiniela guardada (${filled}/${total} partidos)` : '🏆 ¡Quiniela completa guardada!');
   });
 
   $('clearProgol').addEventListener('click', () => {
     progolPicks = {};
-    document.querySelectorAll('.progol-btn').forEach(b => {
-      b.classList.remove('active-1', 'active-x', 'active-2');
-    });
+    document.querySelectorAll('.progol-btn').forEach(b => b.classList.remove('active-l', 'active-e', 'active-v'));
     document.querySelectorAll('.progol-card').forEach(c => c.classList.remove('selected'));
     $('progolSummary').style.display = 'none';
     showToast('🗑️ Quiniela borrada');
   });
 
-  $('summaryClose').addEventListener('click', () => {
-    $('progolSummary').style.display = 'none';
-  });
+  $('summaryClose').addEventListener('click', () => { $('progolSummary').style.display = 'none'; });
 
   $('copyProgol').addEventListener('click', () => {
     const text = generateQuinielaText();
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text).then(() => showToast('📋 Quiniela copiada al portapapeles'));
     } else {
-      showToast('No se pudo copiar. Copia manualmente.');
+      showToast('No se pudo copiar automáticamente');
     }
   });
 }
 
 function renderSummary() {
-  const grid = $('summaryContent');
-  grid.innerHTML = matchesForProgol.map((match, idx) => {
+  $('summaryContent').innerHTML = matchesForProgol.map((match, idx) => {
     const pick = progolPicks[match.id];
-    const badgeClass = pick ? `badge-${pick.toLowerCase()}` : 'badge-none';
-    const pickLabel = pick || '?';
+    const badgeClass = pick === 'L' ? 'badge-l' : pick === 'E' ? 'badge-e' : pick === 'V' ? 'badge-v' : 'badge-none';
     const label = `${idx + 1}. ${match.local} vs ${match.visitante}`;
     return `
       <div class="summary-item">
         <span class="match-label" title="${label}">${label}</span>
-        <span class="summary-badge ${badgeClass}">${pickLabel}</span>
+        <span class="summary-badge ${badgeClass}">${pick || '?'}</span>
       </div>`;
   }).join('');
 }
 
 function generateQuinielaText() {
-  const lines = ['🏆 MI QUINIELA PROGOL - LIGA MX', '═'.repeat(35)];
+  const lines = ['🏆 MI QUINIELA PROGOL - LIGA MX', '═'.repeat(38)];
   matchesForProgol.forEach((match, idx) => {
     const pick = progolPicks[match.id] || '?';
-    lines.push(`${String(idx + 1).padStart(2, '0')}. ${match.local} vs ${match.visitante} → ${pick}`);
+    const label = pick === 'L' ? 'LOCAL' : pick === 'E' ? 'EMPATE' : pick === 'V' ? 'VISITA' : '?';
+    lines.push(`${String(idx+1).padStart(2,'0')}. ${match.local} vs ${match.visitante} → [${pick}] ${label}`);
   });
-  lines.push('═'.repeat(35));
-  lines.push('Powered by UltraProgol · ultraprogol.vercel.app');
+  lines.push('═'.repeat(38));
+  lines.push('UltraProgol · ultraprogol.vercel.app');
   return lines.join('\n');
 }
 
@@ -496,8 +465,7 @@ function generateQuinielaText() {
 function formatDate(isoStr) {
   if (!isoStr) return '';
   try {
-    const d = new Date(isoStr);
-    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return new Date(isoStr).toLocaleDateString('es-MX', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
   } catch { return isoStr; }
 }
 
