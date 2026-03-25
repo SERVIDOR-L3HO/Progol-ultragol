@@ -442,6 +442,22 @@ img { max-width: 100%; }
   font-size: 0.9rem;
 }
 .section-subtitle strong { color: var(--text-primary); }
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  vertical-align: middle;
+  line-height: 1;
+}
+.pill-l { background: rgba(0,210,100,0.15); color: var(--green); border: 1px solid var(--green); }
+.pill-e { background: rgba(255,214,10,0.12); color: var(--gold); border: 1px solid var(--gold); }
+.pill-v { background: rgba(230,57,70,0.12); color: var(--red); border: 1px solid var(--red); }
 
 /* ---- LEGEND ---- */
 .legend-zona {

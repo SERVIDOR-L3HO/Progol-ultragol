@@ -3,7 +3,8 @@
    ======================================== */
 
 const API = 'https://ultragol-api-3.vercel.app';
-const ESPN_LOGO = slug => `https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/${slug}.png&h=100&w=100`;
+/* ESPN logos by numeric team ID (confirmed working) */
+const ESPN_LOGO_ID = id => `https://a.espncdn.com/i/teamlogos/soccer/500/${id}.png`;
 
 /* ---- TEAM DATA ---- */
 const TEAM_COLORS = {
@@ -23,30 +24,30 @@ const TEAM_COLORS = {
   'Puebla': '#003087',
   'San Luis': '#cc0000', 'Atlético de San Luis': '#cc0000',
   'Mazatlán': '#002a6e', 'Mazatlán FC': '#002a6e',
-  'Querétaro': '#003087',
+  'Querétaro': '#1a5fa8',
   'Santos Laguna': '#017a30', 'Santos': '#017a30',
 };
 
-/* ESPN slugs for logo images */
-const TEAM_SLUGS = {
-  'Chivas': 'chivas', 'Guadalajara': 'chivas',
-  'Cruz Azul': 'cruz-azul',
-  'Toluca': 'toluca',
-  'Pumas': 'pumas', 'Pumas UNAM': 'pumas',
-  'Pachuca': 'pachuca',
-  'Atlas': 'atlas',
-  'Tigres': 'tigres', 'Tigres UANL': 'tigres',
-  'Club América': 'america', 'América': 'america',
-  'Monterrey': 'monterrey',
-  'Juárez': 'fc-juarez', 'FC Juarez': 'fc-juarez',
-  'Necaxa': 'necaxa',
-  'León': 'leon',
-  'Tijuana': 'tijuana',
-  'Puebla': 'puebla',
-  'San Luis': 'atletico-de-san-luis', 'Atlético de San Luis': 'atletico-de-san-luis',
-  'Mazatlán': 'mazatlan', 'Mazatlán FC': 'mazatlan',
-  'Querétaro': 'queretaro',
-  'Santos Laguna': 'santos-laguna', 'Santos': 'santos-laguna',
+/* ESPN numeric team IDs → confirmed working URLs */
+const TEAM_ESPN_IDS = {
+  'Chivas': 219, 'Guadalajara': 219,
+  'Cruz Azul': 218,
+  'Toluca': 223,
+  'Pumas': 233, 'Pumas UNAM': 233,
+  'Pachuca': 234,
+  'Atlas': 216,
+  'Tigres': 232, 'Tigres UANL': 232,
+  'Club América': 227, 'América': 227,
+  'Monterrey': 220,
+  'Juárez': 17851, 'FC Juarez': 17851,
+  'Necaxa': 229,
+  'León': 228,
+  'Tijuana': 10125,
+  'Puebla': 231,
+  'San Luis': 15720, 'Atlético de San Luis': 15720,
+  'Mazatlán': 20702, 'Mazatlán FC': 20702,
+  'Querétaro': 222,
+  'Santos Laguna': 225, 'Santos': 225,
 };
 
 const TEAM_ABBR = {
@@ -63,9 +64,6 @@ const TEAM_ABBR = {
   'Querétaro': 'QRO', 'Santos Laguna': 'SAN', 'Santos': 'SAN',
 };
 
-/* Logos loaded from API (populated at runtime) */
-let LOGOS_MAP = {};
-
 function getTeamColor(name) { return TEAM_COLORS[name] || '#374151'; }
 function getTeamAbbr(name) {
   if (TEAM_ABBR[name]) return TEAM_ABBR[name];
@@ -73,9 +71,8 @@ function getTeamAbbr(name) {
   return words.length === 1 ? name.substring(0, 3).toUpperCase() : words.slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
 function getTeamLogo(name) {
-  if (LOGOS_MAP[name]) return LOGOS_MAP[name];
-  const slug = TEAM_SLUGS[name];
-  return slug ? ESPN_LOGO(slug) : null;
+  const id = TEAM_ESPN_IDS[name];
+  return id ? ESPN_LOGO_ID(id) : null;
 }
 
 /* Render a team logo image with fallback colored badge */
@@ -148,20 +145,11 @@ async function fetchData(endpoint) {
 
 /* ---- LOAD ALL ---- */
 async function loadAll() {
-  const [logos, tabla, goleadores, calendario] = await Promise.all([
-    fetchData('/logos'),
+  const [tabla, goleadores, calendario] = await Promise.all([
     fetchData('/tabla'),
     fetchData('/goleadores'),
     fetchData('/calendario'),
   ]);
-
-  /* Cache logos from API */
-  if (logos && logos.logos) {
-    logos.logos.forEach(l => {
-      if (l.equipo && l.logo_mediano) LOGOS_MAP[l.equipo] = l.logo_mediano;
-      if (l.equipo && l.logo) LOGOS_MAP[l.equipo] = l.logo_mediano || l.logo;
-    });
-  }
 
   if (tabla) {
     tablaData = tabla.tabla || [];
