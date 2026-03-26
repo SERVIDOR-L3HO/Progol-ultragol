@@ -381,6 +381,11 @@ function buildProgolMatches(calendario, tablaJson) {
     ];
   }
   window.matchesForProgol = matchesForProgol;
+  // Expose jornada ID for Firebase lifecycle management
+  const rawJornada = matchesForProgol[0]?.jornada || 'current';
+  window.currentJornada = String(rawJornada).replace(/[^a-zA-Z0-9]/g, '');
+  if (typeof window.onJornadaReady === 'function') window.onJornadaReady();
+  updatePicksCounter();
   renderProgolMatches(container, matchesForProgol);
 }
 

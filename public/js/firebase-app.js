@@ -19,6 +19,43 @@ const db   = firebase.firestore();
 
 window.currentUser    = null;
 window.currentProfile = null;
+window.currentJornada = null;
+let autoRefreshTimer  = null;
+
+/* ========================================
+   JORNADA LIFECYCLE
+   ======================================== */
+// Called by app.js once matchesForProgol is ready with jornada info
+window.onJornadaReady = async function() {
+  const jornada = window.currentJornada;
+  if (!jornada || !window.currentUser) return;
+
+  const stored = localStorage.getItem('up_jornada');
+
+  if (stored && stored !== jornada) {
+    // NEW JORNADA DETECTED — clear picks
+    window.quinielaStates = { 1: {}, 2: {} };
+    window.progolPicks    = {};
+    window.activeQuiniela = 1;
+    document.querySelectorAll('.progol-btn').forEach(b => b.classList.remove('active-l','active-e','active-v'));
+    document.querySelectorAll('.progol-card').forEach(c => c.classList.remove('selected'));
+    document.querySelectorAll('[id^="qStatus"]').forEach(el => el.textContent = '0/9');
+    if (typeof window.updatePicksCounter === 'function') window.updatePicksCounter?.();
+    showNewJornadaBanner(stored, jornada);
+  }
+
+  localStorage.setItem('up_jornada', jornada);
+  // Load existing picks for this jornada
+  await loadUserQuinielas(window.currentUser.uid, jornada);
+};
+
+function showNewJornadaBanner(oldJ, newJ) {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.textContent = `🆕 ¡Nueva Jornada ${newJ}! Tu quiniela anterior (J${oldJ}) fue archivada.`;
+  toast.classList.add('show', 'toast-jornada');
+  setTimeout(() => { toast.classList.remove('show', 'toast-jornada'); }, 5000);
+}
 
 /* ========================================
    AUTH STATE OBSERVER
@@ -33,10 +70,15 @@ auth.onAuthStateChanged(async user => {
     if (user.email === ADMIN_EMAIL) {
       document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
     }
-    // Auto-load leaderboard data when tab is opened
+    // If jornada is already known (API loaded before auth), load picks now
+    if (window.currentJornada) {
+      await window.onJornadaReady();
+    }
+    startAutoRefresh();
   } else {
     window.currentUser    = null;
     window.currentProfile = null;
+    stopAutoRefresh();
     showLogin();
   }
 });
@@ -76,6 +118,32 @@ window.logout = async function() {
 };
 
 /* ========================================
+   AUTO-REFRESH
+   ======================================== */
+function startAutoRefresh() {
+  stopAutoRefresh();
+  // Refresh leaderboard every 90 seconds if the tab is active
+  autoRefreshTimer = setInterval(() => {
+    const section = document.getElementById('tab-posiciones');
+    if (section?.classList.contains('active') && window.currentUser) {
+      window.loadLeaderboard();
+    }
+    // Also refresh match results every 90s on progol tab to update counters
+  }, 90000);
+}
+function stopAutoRefresh() {
+  if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+}
+
+// Trigger leaderboard load when Posiciones tab is clicked
+document.addEventListener('click', e => {
+  const link = e.target.closest('.nav-link[data-tab="posiciones"]');
+  if (link && window.currentUser) {
+    setTimeout(() => window.loadLeaderboard(), 100);
+  }
+});
+
+/* ========================================
    PROFILE
    ======================================== */
 async function loadProfile(uid) {
@@ -86,17 +154,38 @@ async function loadProfile(uid) {
 }
 
 /* ========================================
-   SAVE QUINIELA (with quiniela number)
+   LOAD USER QUINIELAS FOR CURRENT JORNADA
+   ======================================== */
+async function loadUserQuinielas(uid, jornada) {
+  for (const num of [1, 2]) {
+    const docId = `${uid}_j${jornada}_${num}`;
+    try {
+      const snap = await db.collection('quinielas').doc(docId).get();
+      if (snap.exists) {
+        window.quinielaStates[num] = snap.data().picks || {};
+      }
+    } catch {}
+  }
+  // Restore currently active quiniela display
+  if (typeof window.switchQuiniela === 'function') {
+    window.switchQuiniela(window.activeQuiniela);
+  }
+}
+
+/* ========================================
+   SAVE QUINIELA (jornada + quiniela number)
    ======================================== */
 window.saveQuinielaToFirestore = async function(picks, matches, quinielaNum = 1) {
   if (!window.currentUser) return false;
   const uid     = window.currentUser.uid;
   const profile = window.currentProfile || {};
-  const docId   = `${uid}_${quinielaNum}`;
+  const jornada = window.currentJornada || 'current';
+  const docId   = `${uid}_j${jornada}_${quinielaNum}`;
   try {
     await db.collection('quinielas').doc(docId).set({
       userId:      uid,
       quinielaNum: quinielaNum,
+      jornada:     jornada,
       nombre:      profile.nombre    || window.currentUser.displayName || '',
       apellidos:   profile.apellidos || '',
       email:       window.currentUser.email,
@@ -163,9 +252,9 @@ function calcScore(picks, matches, resultados) {
    ======================================== */
 window.loadLeaderboard = async function() {
   if (!window.currentUser) return;
-  const podiumWrap       = document.getElementById('podiumWrap');
+  const podiumWrap         = document.getElementById('podiumWrap');
   const leaderboardContent = document.getElementById('leaderboardContent');
-  const winnerBanner     = document.getElementById('winnerBanner');
+  const winnerBanner       = document.getElementById('winnerBanner');
   if (!podiumWrap) return;
 
   podiumWrap.innerHTML         = '<div class="loading-state"><div class="spinner"></div><p>Cargando posiciones...</p></div>';
@@ -173,18 +262,27 @@ window.loadLeaderboard = async function() {
   if (winnerBanner) winnerBanner.style.display = 'none';
 
   try {
-    const snap     = await db.collection('quinielas').get();
+    const jornada = window.currentJornada || 'current';
+    // Only load quinielas for current jornada
+    let snap;
+    try {
+      snap = await db.collection('quinielas').where('jornada', '==', jornada).get();
+    } catch {
+      snap = await db.collection('quinielas').get();
+    }
     const quinielas = [];
     snap.forEach(doc => quinielas.push({ id: doc.id, ...doc.data() }));
+    // Filter by jornada client-side as fallback
+    const filtered = quinielas.filter(q => !q.jornada || q.jornada === jornada || q.jornada === 'current');
 
-    if (quinielas.length === 0) {
-      podiumWrap.innerHTML = `<div class="no-matches"><div class="emoji">📭</div><h3>Sin participantes aún</h3><p>Nadie ha guardado su quiniela todavía.</p></div>`;
+    if (filtered.length === 0) {
+      podiumWrap.innerHTML = `<div class="no-matches"><div class="emoji">📭</div><h3>Sin participantes en Jornada ${jornada}</h3><p>Sé el primero en guardar tu quiniela.</p></div>`;
       return;
     }
 
     const resultados = await fetchResultados();
 
-    const scored = quinielas.map(q => {
+    const scored = filtered.map(q => {
       const score = calcScore(q.picks || {}, q.matches || [], resultados);
       return { ...q, score };
     }).sort((a, b) =>

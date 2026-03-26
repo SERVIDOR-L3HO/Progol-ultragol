@@ -1111,6 +1111,14 @@ img { max-width: 100%; }
   pointer-events: none;
 }
 .toast.show { transform: translateX(-50%) translateY(0); }
+.toast.toast-jornada {
+  background: linear-gradient(135deg, rgba(0,230,118,0.2), var(--bg-secondary));
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  max-width: 420px;
+  white-space: normal;
+  text-align: center;
+}
 
 /* ---- RESPONSIVE ---- */
 @media (max-width: 900px) {
