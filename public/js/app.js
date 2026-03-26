@@ -90,14 +90,58 @@ function teamLogoHTML(name, size = 'md') {
 }
 
 /* ---- STATE (global so firebase-app.js can access) ---- */
-window.TEAM_ESPN_IDS = TEAM_ESPN_IDS; // expose for admin scoring
-window.progolPicks = {};
-let progolPicks = window.progolPicks;
-let tablaData = [];
-let goleadoresData = [];
-let calendarioData = [];
-let matchesForProgol = [];
+window.TEAM_ESPN_IDS    = TEAM_ESPN_IDS;
+window.quinielaStates   = { 1: {}, 2: {} };
+window.activeQuiniela   = 1;
+window.progolPicks      = window.quinielaStates[1];
+let progolPicks         = window.progolPicks;
+let tablaData           = [];
+let goleadoresData      = [];
+let calendarioData      = [];
+let matchesForProgol    = [];
 window.matchesForProgol = matchesForProgol;
+
+/* ---- PICKS COUNTER ---- */
+function updatePicksCounter() {
+  const total  = matchesForProgol.length;
+  [1, 2].forEach(n => {
+    const picks  = window.quinielaStates[n];
+    const filled = Object.keys(picks).length;
+    const el     = document.getElementById(`qStatus${n}`);
+    if (el) {
+      el.textContent = `${filled}/${total || 9}`;
+      el.classList.toggle('q-status-done', filled === (total || 9));
+    }
+  });
+}
+
+/* ---- SWITCH QUINIELA ---- */
+window.switchQuiniela = function(num) {
+  window.quinielaStates[window.activeQuiniela] = { ...progolPicks };
+  window.activeQuiniela = num;
+  progolPicks = { ...window.quinielaStates[num] };
+  window.progolPicks = progolPicks;
+
+  document.querySelectorAll('.q-tab-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById(`qTab${num}`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  document.querySelectorAll('.progol-btn').forEach(b => b.classList.remove('active-l','active-e','active-v'));
+  document.querySelectorAll('.progol-card').forEach(c => c.classList.remove('selected'));
+  Object.entries(progolPicks).forEach(([mid, pick]) => {
+    const card = document.getElementById(`card-${mid}`);
+    if (!card) return;
+    const cls = pick === 'L' ? 'active-l' : pick === 'E' ? 'active-e' : 'active-v';
+    const btn = card.querySelector(`.progol-btn[data-pick="${pick}"]`);
+    if (btn) btn.classList.add(cls);
+    card.classList.add('selected');
+  });
+  const summary = document.getElementById('progolSummary');
+  if (summary) summary.style.display = 'none';
+  const title = document.getElementById('summaryTitle');
+  if (title) title.textContent = `📋 Resumen Quiniela ${num}`;
+  updatePicksCounter();
+};
 
 /* ---- DOM HELPERS ---- */
 const $ = id => document.getElementById(id);
@@ -386,45 +430,52 @@ function renderProgolMatches(container, matches) {
 window.setPick = function(matchId, pick, btn) {
   progolPicks[matchId] = pick;
   window.progolPicks[matchId] = pick;
+  window.quinielaStates[window.activeQuiniela][matchId] = pick;
   const card = $(`card-${matchId}`);
   if (!card) return;
   card.querySelectorAll('.progol-btn').forEach(b => b.classList.remove('active-l', 'active-e', 'active-v'));
   const cls = pick === 'L' ? 'active-l' : pick === 'E' ? 'active-e' : 'active-v';
   btn.classList.add(cls);
   card.classList.add('selected');
+  updatePicksCounter();
   if (Object.keys(progolPicks).length === matchesForProgol.length) {
-    showToast('🎯 ¡Quiniela completa! Guárdala para verla.');
+    showToast(`🎯 ¡Quiniela ${window.activeQuiniela} completa! Guárdala.`);
   }
 };
 
 /* ---- SAVE / CLEAR / SUMMARY ---- */
 function initProgolActions() {
   $('saveProgol').addEventListener('click', async () => {
+    const qNum   = window.activeQuiniela;
     const filled = Object.keys(progolPicks).length;
-    if (filled === 0) { showToast('⚠️ Selecciona al menos un resultado'); return; }
+    if (filled === 0) { showToast(`⚠️ Selecciona al menos un resultado en Quiniela ${qNum}`); return; }
+    const title = $('summaryTitle');
+    if (title) title.textContent = `📋 Resumen Quiniela ${qNum}`;
     renderSummary();
     $('progolSummary').style.display = 'block';
     $('progolSummary').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     const total = matchesForProgol.length;
-    // Save to Firestore if authenticated
     if (typeof window.saveQuinielaToFirestore === 'function') {
-      const ok = await window.saveQuinielaToFirestore(progolPicks, matchesForProgol);
+      const ok = await window.saveQuinielaToFirestore(progolPicks, matchesForProgol, qNum);
       if (ok) {
-        showToast(filled < total ? `☁️ Quiniela guardada (${filled}/${total} partidos)` : '🏆 ¡Quiniela completa guardada!');
+        showToast(filled < total ? `☁️ Q${qNum} guardada (${filled}/${total})` : `🏆 ¡Quiniela ${qNum} completa y guardada!`);
       } else {
-        showToast(filled < total ? `📋 Quiniela lista (${filled}/${total}) — verifica tu conexión` : '🏆 ¡Quiniela lista!');
+        showToast(`📋 Q${qNum} lista — verifica tu conexión`);
       }
     } else {
-      showToast(filled < total ? `📋 Quiniela lista (${filled}/${total} partidos)` : '🏆 ¡Quiniela completa!');
+      showToast(filled < total ? `📋 Q${qNum} lista (${filled}/${total})` : `🏆 ¡Q${qNum} completa!`);
     }
   });
 
   $('clearProgol').addEventListener('click', () => {
+    const qNum = window.activeQuiniela;
     progolPicks = {}; window.progolPicks = {};
+    window.quinielaStates[qNum] = {};
     document.querySelectorAll('.progol-btn').forEach(b => b.classList.remove('active-l', 'active-e', 'active-v'));
     document.querySelectorAll('.progol-card').forEach(c => c.classList.remove('selected'));
     $('progolSummary').style.display = 'none';
-    showToast('🗑️ Quiniela borrada');
+    updatePicksCounter();
+    showToast(`🗑️ Quiniela ${qNum} borrada`);
   });
 
   $('summaryClose').addEventListener('click', () => { $('progolSummary').style.display = 'none'; });

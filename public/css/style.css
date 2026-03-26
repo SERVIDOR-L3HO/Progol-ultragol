@@ -1145,6 +1145,237 @@ img { max-width: 100%; }
 }
 
 /* ============================================
+   PRICE BADGE
+   ============================================ */
+.price-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, rgba(250,204,21,0.15), rgba(250,204,21,0.05));
+  border: 1.5px solid rgba(250,204,21,0.35);
+  border-radius: var(--radius-lg);
+  padding: 12px 20px;
+  flex-shrink: 0;
+}
+.price-icon { font-size: 1.5rem; }
+.price-info { display: flex; flex-direction: column; line-height: 1.2; }
+.price-amount { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; color: #facc15; line-height: 1; }
+.price-label  { font-size: 0.72rem; color: rgba(250,204,21,0.7); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+
+/* ============================================
+   QUINIELA SELECTOR TABS
+   ============================================ */
+.quiniela-selector-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+.quiniela-tabs {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+}
+.q-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 160px;
+  font-family: inherit;
+}
+.q-tab-btn:hover { border-color: var(--accent-green); color: var(--text-primary); }
+.q-tab-btn.active {
+  background: rgba(0,230,118,0.1);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  box-shadow: 0 0 0 3px rgba(0,230,118,0.12);
+}
+.q-num {
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 1px;
+}
+.q-tab-btn.active .q-num { background: rgba(0,230,118,0.2); }
+.q-name { flex: 1; }
+.q-status {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  background: var(--bg-secondary);
+  border-radius: 999px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+.q-status.q-status-done { background: rgba(0,230,118,0.2); color: var(--accent-green); }
+
+/* ============================================
+   WINNER BANNER
+   ============================================ */
+.winner-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, rgba(250,204,21,0.18), rgba(250,204,21,0.06));
+  border: 1.5px solid rgba(250,204,21,0.4);
+  border-radius: var(--radius-lg);
+  padding: 16px 24px;
+  margin-bottom: 28px;
+  font-size: 1.05rem;
+  color: #facc15;
+  font-weight: 600;
+  text-align: center;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250,204,21,0); }
+  50%       { box-shadow: 0 0 20px rgba(250,204,21,0.2); }
+}
+
+/* ============================================
+   PODIUM
+   ============================================ */
+.podium-wrap { margin-bottom: 36px; }
+.podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 0 0;
+}
+.podium-place {
+  flex: 1;
+  max-width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 16px 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+  text-align: center;
+  transition: transform 0.2s;
+}
+.podium-place:hover { transform: translateY(-4px); }
+
+.podium-1 {
+  min-height: 200px;
+  background: linear-gradient(160deg, rgba(250,204,21,0.12), var(--bg-card));
+  border-color: rgba(250,204,21,0.35);
+}
+.podium-2 {
+  min-height: 160px;
+  background: linear-gradient(160deg, rgba(180,180,180,0.1), var(--bg-card));
+  border-color: rgba(180,180,180,0.2);
+}
+.podium-3 {
+  min-height: 130px;
+  background: linear-gradient(160deg, rgba(205,127,50,0.1), var(--bg-card));
+  border-color: rgba(205,127,50,0.2);
+}
+.podium-winner { transform: translateY(-8px); }
+.podium-winner:hover { transform: translateY(-12px); }
+
+.podium-medal { font-size: 2rem; }
+.podium-avatar {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-green), #00b4d8);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; font-weight: 800; color: #000;
+}
+.podium-1 .podium-avatar { width: 60px; height: 60px; font-size: 1.6rem; }
+.podium-name { font-weight: 700; font-size: 0.95rem; color: var(--text-primary); }
+.podium-sub  { font-size: 0.72rem; color: var(--text-muted); }
+.podium-score {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  color: var(--accent-green);
+  line-height: 1;
+}
+.podium-1 .podium-score { font-size: 2.4rem; color: #facc15; }
+.podium-score span { font-size: 1rem; color: var(--text-muted); }
+.podium-bar-wrap {
+  width: 100%;
+  height: 5px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 4px 0;
+}
+.podium-bar { height: 100%; background: linear-gradient(90deg, var(--accent-green), #00b4d8); border-radius: 3px; transition: width 0.6s ease; }
+.podium-1 .podium-bar { background: linear-gradient(90deg, #facc15, #f97316); }
+
+/* ============================================
+   LEADERBOARD TABLE
+   ============================================ */
+.lb-table-wrap { overflow-x: auto; border-radius: var(--radius-lg); border: 1px solid var(--border-color); }
+.lb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.lb-table thead { background: var(--bg-secondary); }
+.lb-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-color);
+}
+.lb-table td { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+.lb-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+.lb-self-row td { background: rgba(0,230,118,0.05) !important; }
+.lb-rank  { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--text-muted); }
+.lb-name  { font-weight: 700; color: var(--text-primary); }
+.lb-qnum  { color: var(--text-muted); }
+.lb-correct { color: #4ade80; font-weight: 700; }
+.lb-wrong   { color: #f87171; font-weight: 700; }
+.lb-pend    { color: var(--text-muted); }
+.lb-you {
+  display: inline-block;
+  padding: 2px 8px;
+  background: rgba(0,230,118,0.15);
+  color: var(--accent-green);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+/* Q badge for admin table */
+.q-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  background: rgba(0,230,118,0.12);
+  color: var(--accent-green);
+  border: 1px solid rgba(0,230,118,0.25);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* ============================================
    LOGIN OVERLAY
    ============================================ */
 .login-overlay {

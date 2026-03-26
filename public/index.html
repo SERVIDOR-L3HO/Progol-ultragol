@@ -115,6 +115,7 @@
           <li><a href="#" class="nav-link" data-tab="tabla">Tabla</a></li>
           <li><a href="#" class="nav-link" data-tab="goleadores">Goleadores</a></li>
           <li><a href="#" class="nav-link" data-tab="calendario">Calendario</a></li>
+          <li><a href="#" class="nav-link" data-tab="posiciones">🏆 Posiciones</a></li>
           <li class="admin-only" style="display:none"><a href="#" class="nav-link nav-link-admin" data-tab="admin">🔐 Admin</a></li>
         </ul>
         <div class="nav-user">
@@ -142,6 +143,7 @@
         <li><a href="#" class="nav-link" data-tab="tabla">📊 Tabla</a></li>
         <li><a href="#" class="nav-link" data-tab="goleadores">🥅 Goleadores</a></li>
         <li><a href="#" class="nav-link" data-tab="calendario">📅 Calendario</a></li>
+        <li><a href="#" class="nav-link" data-tab="posiciones">🏆 Posiciones</a></li>
         <li class="admin-only" style="display:none"><a href="#" class="nav-link" data-tab="admin">🔐 Admin</a></li>
       </ul>
     </div>
@@ -195,13 +197,37 @@
         <div class="section-header">
           <div>
             <h2 class="section-title">🎯 Tu Progol</h2>
-            <p class="section-subtitle">Selecciona tu pronóstico: <span class="pill pill-l">L</span> Local &nbsp;·&nbsp; <span class="pill pill-e">E</span> Empate &nbsp;·&nbsp; <span class="pill pill-v">V</span> Visitante</p>
+            <p class="section-subtitle">Selecciona: <span class="pill pill-l">L</span> Local &nbsp;·&nbsp; <span class="pill pill-e">E</span> Empate &nbsp;·&nbsp; <span class="pill pill-v">V</span> Visitante</p>
+          </div>
+          <div class="price-badge">
+            <span class="price-icon">💰</span>
+            <div class="price-info">
+              <span class="price-amount">$50</span>
+              <span class="price-label">por quiniela</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quiniela selector -->
+        <div class="quiniela-selector-row">
+          <div class="quiniela-tabs">
+            <button class="q-tab-btn active" id="qTab1" onclick="switchQuiniela(1)">
+              <span class="q-num">Q1</span>
+              <span class="q-name">Quiniela 1</span>
+              <span class="q-status" id="qStatus1">0/9</span>
+            </button>
+            <button class="q-tab-btn" id="qTab2" onclick="switchQuiniela(2)">
+              <span class="q-num">Q2</span>
+              <span class="q-name">Quiniela 2</span>
+              <span class="q-status" id="qStatus2">0/9</span>
+            </button>
           </div>
           <div class="progol-actions">
             <button class="btn-outline" id="clearProgol">Limpiar</button>
-            <button class="btn-primary" id="saveProgol">Guardar Quiniela</button>
+            <button class="btn-primary" id="saveProgol">☁️ Guardar</button>
           </div>
         </div>
+
         <div id="progolMatches" class="progol-grid">
           <div class="loading-state">
             <div class="spinner"></div>
@@ -210,7 +236,7 @@
         </div>
         <div class="progol-summary" id="progolSummary" style="display:none">
           <div class="summary-header">
-            <h3>📋 Resumen de tu Quiniela</h3>
+            <h3 id="summaryTitle">📋 Resumen de tu Quiniela</h3>
             <button class="summary-close" id="summaryClose">✕</button>
           </div>
           <div id="summaryContent" class="summary-grid"></div>
@@ -275,6 +301,28 @@
             <p>Cargando calendario...</p>
           </div>
         </div>
+      </section>
+
+      <!-- TAB: POSICIONES -->
+      <section class="tab-section" id="tab-posiciones">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">🏆 Posiciones</h2>
+            <p class="section-subtitle">Ranking de participantes · Actualización en tiempo real</p>
+          </div>
+          <button class="btn-outline" onclick="window.loadLeaderboard()">🔄 Actualizar</button>
+        </div>
+
+        <!-- Podium -->
+        <div class="podium-wrap" id="podiumWrap">
+          <div class="loading-state"><div class="spinner"></div><p>Cargando posiciones...</p></div>
+        </div>
+
+        <!-- Winner announcement -->
+        <div class="winner-banner" id="winnerBanner" style="display:none"></div>
+
+        <!-- Full leaderboard table -->
+        <div id="leaderboardContent"></div>
       </section>
 
       <!-- TAB: ADMIN -->

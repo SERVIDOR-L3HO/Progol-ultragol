@@ -4,7 +4,6 @@
 
 const ADMIN_EMAIL = 'servidorl3ho@gmail.com';
 
-/* ---- FIREBASE CONFIG ---- */
 const firebaseConfig = {
   apiKey: "AIzaSyCAGrsMjwPLIaDbExIUYVg35QS1kssXDH4",
   authDomain: "ultragol-api.firebaseapp.com",
@@ -18,9 +17,8 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ---- CURRENT USER STATE ---- */
-window.currentUser     = null;
-window.currentProfile  = null;
+window.currentUser    = null;
+window.currentProfile = null;
 
 /* ========================================
    AUTH STATE OBSERVER
@@ -30,15 +28,12 @@ auth.onAuthStateChanged(async user => {
     window.currentUser = user;
     const profile = await loadProfile(user.uid);
     window.currentProfile = profile;
-
-    // Update UI
     updateUserUI(user, profile);
     showApp();
-
-    // If admin, show admin tab
     if (user.email === ADMIN_EMAIL) {
       document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
     }
+    // Auto-load leaderboard data when tab is opened
   } else {
     window.currentUser    = null;
     window.currentProfile = null;
@@ -47,49 +42,41 @@ auth.onAuthStateChanged(async user => {
 });
 
 /* ========================================
-   LOGIN / REGISTER FUNCTIONS
+   LOGIN / REGISTER
    ======================================== */
 async function login(email, password) {
-  setAuthLoading(true);
-  clearAuthError();
+  setAuthLoading(true); clearAuthError();
   try {
     await auth.signInWithEmailAndPassword(email, password);
-  } catch (err) {
-    showAuthError(friendlyError(err.code));
-  } finally {
-    setAuthLoading(false);
-  }
+  } catch (err) { showAuthError(friendlyError(err.code)); }
+  finally { setAuthLoading(false); }
 }
 
 async function register(nombre, apellidos, email, password) {
-  setAuthLoading(true);
-  clearAuthError();
+  setAuthLoading(true); clearAuthError();
   try {
     const cred = await auth.createUserWithEmailAndPassword(email, password);
     const uid  = cred.user.uid;
     await cred.user.updateProfile({ displayName: `${nombre} ${apellidos}` });
     await db.collection('users').doc(uid).set({
-      nombre,
-      apellidos,
-      email,
+      nombre, apellidos, email,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
     window.currentProfile = { nombre, apellidos, email };
-  } catch (err) {
-    showAuthError(friendlyError(err.code));
-  } finally {
-    setAuthLoading(false);
-  }
+  } catch (err) { showAuthError(friendlyError(err.code)); }
+  finally { setAuthLoading(false); }
 }
 
 window.logout = async function() {
   await auth.signOut();
-  window.progolPicks = {};
+  window.quinielaStates = { 1: {}, 2: {} };
+  window.activeQuiniela = 1;
+  window.progolPicks    = {};
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
 };
 
 /* ========================================
-   PROFILE / QUINIELA FIRESTORE
+   PROFILE
    ======================================== */
 async function loadProfile(uid) {
   try {
@@ -98,19 +85,24 @@ async function loadProfile(uid) {
   } catch { return null; }
 }
 
-window.saveQuinielaToFirestore = async function(picks, matches) {
-  if (!window.currentUser) return;
-  const uid = window.currentUser.uid;
+/* ========================================
+   SAVE QUINIELA (with quiniela number)
+   ======================================== */
+window.saveQuinielaToFirestore = async function(picks, matches, quinielaNum = 1) {
+  if (!window.currentUser) return false;
+  const uid     = window.currentUser.uid;
   const profile = window.currentProfile || {};
+  const docId   = `${uid}_${quinielaNum}`;
   try {
-    await db.collection('quinielas').doc(uid).set({
-      userId:    uid,
-      nombre:    profile.nombre    || window.currentUser.displayName || '',
-      apellidos: profile.apellidos || '',
-      email:     window.currentUser.email,
-      picks:     picks,
-      matches:   matches.map(m => ({ id: m.id, local: m.local, visitante: m.visitante, jornada: m.jornada })),
-      savedAt:   firebase.firestore.FieldValue.serverTimestamp(),
+    await db.collection('quinielas').doc(docId).set({
+      userId:      uid,
+      quinielaNum: quinielaNum,
+      nombre:      profile.nombre    || window.currentUser.displayName || '',
+      apellidos:   profile.apellidos || '',
+      email:       window.currentUser.email,
+      picks:       picks,
+      matches:     matches.map(m => ({ id: m.id, local: m.local, visitante: m.visitante, jornada: m.jornada })),
+      savedAt:     firebase.firestore.FieldValue.serverTimestamp(),
     });
     return true;
   } catch (err) {
@@ -120,63 +112,45 @@ window.saveQuinielaToFirestore = async function(picks, matches) {
 };
 
 /* ========================================
-   ADMIN: LOAD ALL QUINIELAS
+   SHARED: FETCH MATCH RESULTS
    ======================================== */
-window.loadAdminData = async function() {
-  if (!window.currentUser || window.currentUser.email !== ADMIN_EMAIL) return;
-
-  const container = document.getElementById('adminContent');
-  container.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Cargando datos...</p></div>';
-
+async function fetchResultados() {
+  const resultados = {};
   try {
-    // Load all quinielas
-    const snap = await db.collection('quinielas').get();
-    const quinielas = [];
-    snap.forEach(doc => quinielas.push({ id: doc.id, ...doc.data() }));
+    const res  = await fetch('https://ultragol-api-3.vercel.app/marcadores');
+    const data = await res.json();
+    if (data.partidos) {
+      data.partidos.forEach(p => {
+        if (p.estado?.finalizado) {
+          let resultado = 'E';
+          if (p.local?.ganador)     resultado = 'L';
+          if (p.visitante?.ganador) resultado = 'V';
+          resultados[`${p.local?.id}_${p.visitante?.id}`] = {
+            resultado,
+            local:     p.local?.nombre,
+            visitante: p.visitante?.nombre,
+            marcadorL: p.local?.marcador,
+            marcadorV: p.visitante?.marcador,
+          };
+        }
+      });
+    }
+  } catch {}
+  return resultados;
+}
 
-    // Load current match results
-    let resultados = {};
-    try {
-      const res = await fetch('https://ultragol-api-3.vercel.app/marcadores');
-      const data = await res.json();
-      if (data.partidos) {
-        data.partidos.forEach(p => {
-          if (p.estado?.finalizado) {
-            const localId     = p.local?.id;
-            const visitanteId = p.visitante?.id;
-            let resultado = 'E';
-            if (p.local?.ganador)     resultado = 'L';
-            if (p.visitante?.ganador) resultado = 'V';
-            // Index by team ESPN ID for matching
-            resultados[`${localId}_${visitanteId}`] = {
-              resultado,
-              local:     p.local?.nombre,
-              visitante: p.visitante?.nombre,
-              marcadorL: p.local?.marcador,
-              marcadorV: p.visitante?.marcador,
-            };
-          }
-        });
-      }
-    } catch {}
-
-    renderAdminPanel(quinielas, resultados);
-  } catch (err) {
-    container.innerHTML = `<div class="no-matches"><div class="emoji">⚠️</div><h3>Error al cargar datos</h3><p>${err.message}</p></div>`;
-  }
-};
-
+/* ========================================
+   SHARED: CALC SCORE
+   ======================================== */
 function calcScore(picks, matches, resultados) {
   let correctos = 0, incorrectos = 0, pendientes = 0;
   matches.forEach(m => {
-    const pick     = picks[m.id];
+    const pick = picks[m.id];
     if (!pick) { pendientes++; return; }
-
     const localId     = window.TEAM_ESPN_IDS?.[m.local];
     const visitanteId = window.TEAM_ESPN_IDS?.[m.visitante];
     const key         = `${localId}_${visitanteId}`;
     const res         = resultados[key];
-
     if (!res) { pendientes++; }
     else if (pick === res.resultado) { correctos++; }
     else { incorrectos++; }
@@ -184,31 +158,191 @@ function calcScore(picks, matches, resultados) {
   return { correctos, incorrectos, pendientes, total: matches.length };
 }
 
-function renderAdminPanel(quinielas, resultados) {
-  const container = document.getElementById('adminContent');
+/* ========================================
+   PUBLIC LEADERBOARD
+   ======================================== */
+window.loadLeaderboard = async function() {
+  if (!window.currentUser) return;
+  const podiumWrap       = document.getElementById('podiumWrap');
+  const leaderboardContent = document.getElementById('leaderboardContent');
+  const winnerBanner     = document.getElementById('winnerBanner');
+  if (!podiumWrap) return;
 
-  if (quinielas.length === 0) {
-    container.innerHTML = `
-      <div class="no-matches">
-        <div class="emoji">📭</div>
-        <h3>Sin quinielas registradas</h3>
-        <p>Todavía ningún usuario ha guardado su quiniela.</p>
-      </div>`;
-    return;
+  podiumWrap.innerHTML         = '<div class="loading-state"><div class="spinner"></div><p>Cargando posiciones...</p></div>';
+  leaderboardContent.innerHTML = '';
+  if (winnerBanner) winnerBanner.style.display = 'none';
+
+  try {
+    const snap     = await db.collection('quinielas').get();
+    const quinielas = [];
+    snap.forEach(doc => quinielas.push({ id: doc.id, ...doc.data() }));
+
+    if (quinielas.length === 0) {
+      podiumWrap.innerHTML = `<div class="no-matches"><div class="emoji">📭</div><h3>Sin participantes aún</h3><p>Nadie ha guardado su quiniela todavía.</p></div>`;
+      return;
+    }
+
+    const resultados = await fetchResultados();
+
+    const scored = quinielas.map(q => {
+      const score = calcScore(q.picks || {}, q.matches || [], resultados);
+      return { ...q, score };
+    }).sort((a, b) =>
+      b.score.correctos - a.score.correctos ||
+      a.score.incorrectos - b.score.incorrectos
+    );
+
+    renderLeaderboard(scored, resultados, winnerBanner, podiumWrap, leaderboardContent);
+  } catch (err) {
+    podiumWrap.innerHTML = `<div class="no-matches"><div class="emoji">⚠️</div><h3>Error al cargar</h3><p>${err.message}</p></div>`;
+  }
+};
+
+function renderLeaderboard(ranked, resultados, winnerBanner, podiumWrap, leaderboardContent) {
+  const maxCorrectos = ranked[0]?.score.correctos || 0;
+  const total        = ranked[0]?.matches?.length  || 9;
+  const allDone      = ranked.every(q => q.score.pendientes === 0);
+
+  // Winner announcement
+  if (winnerBanner) {
+    const leaders = ranked.filter(q => q.score.correctos === maxCorrectos && maxCorrectos > 0);
+    if (leaders.length > 0) {
+      const names = leaders.map(q => `<strong>${q.nombre} ${q.apellidos}</strong>`).join(' y ');
+      winnerBanner.innerHTML = leaders.length === 1
+        ? `🥇 ¡Líder actual: ${names} con ${maxCorrectos} aciertos!`
+        : `🥇 ¡Empate en la cima: ${names} — ${maxCorrectos} aciertos!`;
+      winnerBanner.style.display = 'flex';
+    }
   }
 
-  // Calculate scores for ranking
+  // Podium (top 3 but highlight 1st & 2nd)
+  const top3 = ranked.slice(0, 3);
+  const podiumOrder = top3.length >= 2
+    ? [top3[1], top3[0], top3[2]].filter(Boolean)
+    : top3;
+
+  podiumWrap.innerHTML = `
+    <div class="podium">
+      ${podiumOrder.map((q, visIdx) => {
+        const rankPos  = ranked.indexOf(q) + 1;
+        const medals   = ['🥇','🥈','🥉'];
+        const isTop    = rankPos === 1;
+        const pctW     = total > 0 ? Math.round((q.score.correctos / total) * 100) : 0;
+        const nombre   = `${q.nombre || ''} ${q.apellidos || ''}`.trim() || 'Usuario';
+        const quinNum  = q.quinielaNum ? ` · Q${q.quinielaNum}` : '';
+        const status   = playerStatus(q.score, maxCorrectos);
+        return `
+          <div class="podium-place podium-${rankPos} ${isTop ? 'podium-winner' : ''}">
+            <div class="podium-medal">${medals[rankPos - 1] || rankPos}</div>
+            <div class="podium-avatar">${nombre.charAt(0).toUpperCase()}</div>
+            <div class="podium-name">${nombre}</div>
+            <div class="podium-sub">${q.email || ''}${quinNum}</div>
+            <div class="podium-score">${q.score.correctos}<span>/${total}</span></div>
+            <div class="podium-bar-wrap">
+              <div class="podium-bar" style="width:${pctW}%"></div>
+            </div>
+            <div class="podium-status">${status}</div>
+          </div>`;
+      }).join('')}
+    </div>`;
+
+  // Full table
+  leaderboardContent.innerHTML = `
+    <div class="lb-table-wrap">
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Participante</th>
+            <th>Q</th>
+            <th>✅ Aciertos</th>
+            <th>❌ Errores</th>
+            <th>⏳ Pend.</th>
+            <th>Progreso</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${ranked.map((q, idx) => {
+            const nombre  = `${q.nombre || ''} ${q.apellidos || ''}`.trim() || 'Usuario';
+            const { correctos, incorrectos, pendientes } = q.score;
+            const pct     = total > 0 ? Math.round((correctos / total) * 100) : 0;
+            const status  = playerStatus(q.score, maxCorrectos);
+            const isSelf  = q.userId === window.currentUser?.uid;
+            return `
+              <tr class="${isSelf ? 'lb-self-row' : ''}">
+                <td class="lb-rank">${idx + 1}</td>
+                <td class="lb-name">${nombre}${isSelf ? ' <span class="lb-you">Tú</span>' : ''}</td>
+                <td class="lb-qnum">Q${q.quinielaNum || 1}</td>
+                <td class="lb-correct">${correctos}</td>
+                <td class="lb-wrong">${incorrectos}</td>
+                <td class="lb-pend">${pendientes}</td>
+                <td class="lb-prog">
+                  <div class="score-bar-wrap">
+                    <div class="score-bar" style="width:${pct}%"></div>
+                    <span>${correctos}/${total}</span>
+                  </div>
+                </td>
+                <td>${status}</td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function playerStatus(score, maxCorrectos) {
+  const { correctos, incorrectos, pendientes } = score;
+  const posibleMax = correctos + pendientes;
+  if (correctos === maxCorrectos && maxCorrectos > 0)
+    return '<span class="status-badge status-ganando">🥇 Ganando</span>';
+  if (posibleMax < maxCorrectos)
+    return '<span class="status-badge status-eliminado">❌ Eliminado</span>';
+  return '<span class="status-badge status-carrera">📊 En carrera</span>';
+}
+
+/* ========================================
+   ADMIN PANEL
+   ======================================== */
+window.loadAdminData = async function() {
+  if (!window.currentUser || window.currentUser.email !== ADMIN_EMAIL) return;
+  const container = document.getElementById('adminContent');
+  container.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Cargando datos...</p></div>';
+  try {
+    const snap = await db.collection('quinielas').get();
+    const quinielas = [];
+    snap.forEach(doc => quinielas.push({ id: doc.id, ...doc.data() }));
+    const resultados = await fetchResultados();
+    renderAdminPanel(quinielas, resultados);
+  } catch (err) {
+    container.innerHTML = `<div class="no-matches"><div class="emoji">⚠️</div><h3>Error</h3><p>${err.message}</p></div>`;
+  }
+};
+
+function calcScoreAdmin(picks, matches, resultados) {
+  return calcScore(picks, matches, resultados);
+}
+
+function renderAdminPanel(quinielas, resultados) {
+  const container = document.getElementById('adminContent');
+  if (quinielas.length === 0) {
+    container.innerHTML = `<div class="no-matches"><div class="emoji">📭</div><h3>Sin quinielas registradas</h3><p>Nadie ha guardado su quiniela aún.</p></div>`;
+    return;
+  }
   const ranked = quinielas.map(q => {
     const score = calcScore(q.picks || {}, q.matches || [], resultados);
     return { ...q, score };
   }).sort((a, b) => b.score.correctos - a.score.correctos);
-
   const maxCorrectos = ranked[0]?.score.correctos || 0;
 
   container.innerHTML = `
     <div class="admin-stats-row">
       <div class="admin-stat-card">
         <span class="admin-stat-num">${quinielas.length}</span>
+        <span class="admin-stat-label">Quinielas</span>
+      </div>
+      <div class="admin-stat-card">
+        <span class="admin-stat-num">${[...new Set(quinielas.map(q=>q.userId))].length}</span>
         <span class="admin-stat-label">Participantes</span>
       </div>
       <div class="admin-stat-card">
@@ -217,54 +351,32 @@ function renderAdminPanel(quinielas, resultados) {
       </div>
       <div class="admin-stat-card">
         <span class="admin-stat-num">${Object.keys(resultados).length}</span>
-        <span class="admin-stat-label">Partidos Finalizados</span>
+        <span class="admin-stat-label">Resultados</span>
       </div>
     </div>
     <div class="admin-table-wrap">
       <table class="admin-table">
         <thead>
-          <tr>
-            <th>#</th>
-            <th>Jugador</th>
-            <th>Email</th>
-            <th>Aciertos</th>
-            <th>Errores</th>
-            <th>Pend.</th>
-            <th>Total</th>
-            <th>Estado</th>
-            <th></th>
-          </tr>
+          <tr><th>#</th><th>Jugador</th><th>Q</th><th>Email</th><th>✅</th><th>❌</th><th>⏳</th><th>Progreso</th><th>Estado</th><th></th></tr>
         </thead>
         <tbody>
-          ${ranked.map((q, idx) => renderAdminRow(q, idx + 1, resultados, maxCorrectos, ranked.length)).join('')}
+          ${ranked.map((q, idx) => renderAdminRow(q, idx + 1, resultados, maxCorrectos)).join('')}
         </tbody>
       </table>
-    </div>
-    <div class="admin-detail-container" id="adminDetailContainer"></div>
-  `;
+    </div>`;
 }
 
-function playerStatus(score, maxCorrectos, totalJugadores) {
-  const { correctos, incorrectos, pendientes, total } = score;
-  const posibleMax = correctos + pendientes;
-  if (correctos === maxCorrectos && maxCorrectos > 0) {
-    return '<span class="status-badge status-ganando">🥇 Ganando</span>';
-  }
-  if (posibleMax < maxCorrectos) {
-    return '<span class="status-badge status-eliminado">❌ Eliminado</span>';
-  }
-  return '<span class="status-badge status-carrera">📊 En carrera</span>';
-}
-
-function renderAdminRow(q, rank, resultados, maxCorrectos, totalJugadores) {
+function renderAdminRow(q, rank, resultados, maxCorrectos) {
   const { correctos, incorrectos, pendientes, total } = q.score;
-  const nombre = `${q.nombre || ''} ${q.apellidos || ''}`.trim() || 'Sin nombre';
-  const status = playerStatus(q.score, maxCorrectos, totalJugadores);
-  const pct = total > 0 ? Math.round((correctos / total) * 100) : 0;
+  const nombre  = `${q.nombre || ''} ${q.apellidos || ''}`.trim() || 'Sin nombre';
+  const status  = playerStatus(q.score, maxCorrectos);
+  const pct     = total > 0 ? Math.round((correctos / total) * 100) : 0;
+  const qNum    = q.quinielaNum || 1;
   return `
     <tr class="admin-row" onclick="toggleDetail('${q.id}')" style="cursor:pointer">
       <td class="admin-rank">${rank}</td>
       <td class="admin-name">${nombre}</td>
+      <td><span class="q-badge">Q${qNum}</span></td>
       <td class="admin-email">${q.email || '—'}</td>
       <td class="admin-correctos">${correctos}</td>
       <td class="admin-incorrectos">${incorrectos}</td>
@@ -279,9 +391,7 @@ function renderAdminRow(q, rank, resultados, maxCorrectos, totalJugadores) {
       <td class="admin-expand"><span id="arrow-${q.id}">▼</span></td>
     </tr>
     <tr class="admin-detail-row" id="detail-${q.id}" style="display:none">
-      <td colspan="9">
-        ${renderQuinielaDetail(q, resultados)}
-      </td>
+      <td colspan="10">${renderQuinielaDetail(q, resultados)}</td>
     </tr>`;
 }
 
@@ -289,29 +399,19 @@ function renderQuinielaDetail(q, resultados) {
   const picks   = q.picks   || {};
   const matches = q.matches || [];
   if (matches.length === 0) return '<div class="detail-empty">Sin partidos en esta quiniela</div>';
-
   return `
     <div class="quiniela-detail">
       <div class="detail-picks-grid">
         ${matches.map((m, idx) => {
-          const pick = picks[m.id];
+          const pick        = picks[m.id];
           const localId     = window.TEAM_ESPN_IDS?.[m.local];
           const visitanteId = window.TEAM_ESPN_IDS?.[m.visitante];
-          const key  = `${localId}_${visitanteId}`;
-          const res  = resultados[key];
-          let pickClass = 'pick-pending';
-          let resultStr  = '⏳ Pendiente';
+          const res         = resultados[`${localId}_${visitanteId}`];
+          let pickClass = 'pick-pending', resultStr = '⏳ Pendiente';
           if (res) {
-            if (!pick) {
-              pickClass = 'pick-nopick';
-              resultStr  = `Resultado: <strong>${res.resultado}</strong> (${res.marcadorL}-${res.marcadorV})`;
-            } else if (pick === res.resultado) {
-              pickClass = 'pick-correct';
-              resultStr = `✅ ${res.marcadorL}-${res.marcadorV}`;
-            } else {
-              pickClass = 'pick-wrong';
-              resultStr = `❌ Fue ${res.resultado} (${res.marcadorL}-${res.marcadorV})`;
-            }
+            if (!pick)                { pickClass = 'pick-nopick';  resultStr = `Resultado: <strong>${res.resultado}</strong> (${res.marcadorL}-${res.marcadorV})`; }
+            else if (pick === res.resultado) { pickClass = 'pick-correct'; resultStr = `✅ ${res.marcadorL}-${res.marcadorV}`; }
+            else                      { pickClass = 'pick-wrong';   resultStr = `❌ Fue ${res.resultado} (${res.marcadorL}-${res.marcadorV})`; }
           }
           const logoL = localId     ? `https://a.espncdn.com/i/teamlogos/soccer/500/${localId}.png`     : '';
           const logoV = visitanteId ? `https://a.espncdn.com/i/teamlogos/soccer/500/${visitanteId}.png` : '';
@@ -333,31 +433,24 @@ function renderQuinielaDetail(q, resultados) {
     </div>`;
 }
 
-window.toggleDetail = function(uid) {
-  const row   = document.getElementById(`detail-${uid}`);
-  const arrow = document.getElementById(`arrow-${uid}`);
+window.toggleDetail = function(id) {
+  const row   = document.getElementById(`detail-${id}`);
+  const arrow = document.getElementById(`arrow-${id}`);
   if (!row) return;
   const visible = row.style.display !== 'none';
-  row.style.display  = visible ? 'none' : 'table-row';
-  arrow.textContent  = visible ? '▼' : '▲';
+  row.style.display = visible ? 'none' : 'table-row';
+  arrow.textContent = visible ? '▼' : '▲';
 };
 
 /* ========================================
    UI HELPERS
    ======================================== */
-function showApp() {
-  document.getElementById('loginOverlay').style.display  = 'none';
-  document.getElementById('mainApp').style.display       = 'block';
-}
-function showLogin() {
-  document.getElementById('loginOverlay').style.display  = 'flex';
-  document.getElementById('mainApp').style.display       = 'none';
-}
+function showApp()   { document.getElementById('loginOverlay').style.display = 'none';  document.getElementById('mainApp').style.display = 'block'; }
+function showLogin() { document.getElementById('loginOverlay').style.display = 'flex';  document.getElementById('mainApp').style.display = 'none';  }
+
 function updateUserUI(user, profile) {
   const nombre = profile?.nombre || user.displayName || user.email;
-  document.querySelectorAll('.user-name-display').forEach(el => {
-    el.textContent = nombre;
-  });
+  document.querySelectorAll('.user-name-display').forEach(el => el.textContent = nombre);
 }
 function setAuthLoading(on) {
   document.querySelectorAll('.auth-submit-btn').forEach(btn => {
@@ -366,27 +459,21 @@ function setAuthLoading(on) {
   });
 }
 function showAuthError(msg) {
-  document.querySelectorAll('.auth-error').forEach(el => {
-    el.textContent = msg;
-    el.style.display = 'block';
-  });
+  document.querySelectorAll('.auth-error').forEach(el => { el.textContent = msg; el.style.display = 'block'; });
 }
 function clearAuthError() {
-  document.querySelectorAll('.auth-error').forEach(el => {
-    el.textContent   = '';
-    el.style.display = 'none';
-  });
+  document.querySelectorAll('.auth-error').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
 }
 function friendlyError(code) {
   const map = {
-    'auth/user-not-found':      'No existe una cuenta con ese correo.',
-    'auth/wrong-password':      'Contraseña incorrecta.',
-    'auth/email-already-in-use':'Ese correo ya está registrado.',
-    'auth/weak-password':       'La contraseña debe tener al menos 6 caracteres.',
-    'auth/invalid-email':       'El correo no es válido.',
-    'auth/too-many-requests':   'Demasiados intentos. Espera un momento.',
-    'auth/network-request-failed': 'Error de red. Verifica tu conexión.',
-    'auth/invalid-credential':  'Correo o contraseña incorrectos.',
+    'auth/user-not-found':        'No existe una cuenta con ese correo.',
+    'auth/wrong-password':        'Contraseña incorrecta.',
+    'auth/email-already-in-use':  'Ese correo ya está registrado.',
+    'auth/weak-password':         'La contraseña debe tener al menos 6 caracteres.',
+    'auth/invalid-email':         'El correo no es válido.',
+    'auth/too-many-requests':     'Demasiados intentos. Espera un momento.',
+    'auth/network-request-failed':'Error de red. Verifica tu conexión.',
+    'auth/invalid-credential':    'Correo o contraseña incorrectos.',
   };
   return map[code] || 'Error al iniciar sesión. Intenta de nuevo.';
 }
@@ -395,7 +482,6 @@ function friendlyError(code) {
    INIT AUTH FORMS
    ======================================== */
 document.addEventListener('DOMContentLoaded', () => {
-  /* --- TAB SWITCHING --- */
   document.querySelectorAll('.auth-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const target = btn.dataset.tab;
@@ -407,15 +493,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  /* --- LOGIN FORM --- */
   document.getElementById('loginForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const email    = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    await login(email, password);
+    await login(document.getElementById('loginEmail').value.trim(), document.getElementById('loginPassword').value);
   });
 
-  /* --- REGISTER FORM --- */
   document.getElementById('registerForm').addEventListener('submit', async e => {
     e.preventDefault();
     const nombre    = document.getElementById('regNombre').value.trim();
