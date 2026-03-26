@@ -993,6 +993,12 @@ img { max-width: 100%; }
   gap: 8px;
 }
 .cal-team.away { flex-direction: row-reverse; text-align: right; }
+.cal-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
 .cal-team-name {
   font-weight: 600;
   font-size: 0.85rem;

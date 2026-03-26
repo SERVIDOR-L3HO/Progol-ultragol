@@ -299,47 +299,73 @@ function renderCalendario(calendario) {
       <div class="no-matches">
         <div class="emoji">📅</div>
         <h3>Sin partidos disponibles</h3>
-        <p>El calendario no tiene partidos en este momento.<br>Vuelve más tarde para ver los próximos encuentros.</p>
+        <p>Vuelve más tarde para ver los próximos encuentros.</p>
       </div>`;
     return;
   }
-  const jornadas = {};
-  calendario.forEach(m => {
-    const j = m.jornada || 'Próximos';
-    if (!jornadas[j]) jornadas[j] = [];
-    jornadas[j].push(m);
+
+  // Show upcoming + live matches, group by date
+  const relevantes = calendario.filter(m => m.esEnVivo || m.estado !== 'Finalizado');
+  const displayList = relevantes.length > 0 ? relevantes.slice(0, 40) : calendario.slice(0, 40);
+
+  const byFecha = {};
+  displayList.forEach(m => {
+    const key = m.fecha || 'Próximos';
+    if (!byFecha[key]) byFecha[key] = [];
+    byFecha[key].push(m);
   });
-  container.innerHTML = Object.entries(jornadas).map(([j, matches]) => `
+
+  if (Object.keys(byFecha).length === 0) {
+    container.innerHTML = `<div class="no-matches"><div class="emoji">📅</div><h3>Sin partidos próximos</h3><p>La jornada está por comenzar.</p></div>`;
+    return;
+  }
+
+  container.innerHTML = Object.entries(byFecha).map(([fecha, matches]) => `
     <div class="jornada-section">
-      <div class="jornada-title">Jornada ${j}</div>
+      <div class="jornada-title">📅 ${capitalizeFecha(fecha)}</div>
       <div class="calendario-grid">${matches.map(m => renderCalMatch(m)).join('')}</div>
     </div>`).join('');
 }
 
+function capitalizeFecha(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 function renderCalMatch(m) {
-  const local = m.local || m.equipo_local || 'Local';
-  const visitante = m.visitante || m.equipo_visitante || 'Visitante';
-  const marcador = m.marcador || null;
-  const estado = m.estado || m.status || 'próximo';
+  // Support both old (local/visitante) and new (equipoLocal/equipoVisitante) API formats
+  const local     = m.equipoLocal?.nombre    || m.local    || m.equipo_local    || 'Local';
+  const visitante = m.equipoVisitante?.nombre || m.visitante || m.equipo_visitante || 'Visitante';
+  const localEsc  = m.equipoLocal?.escudo;
+  const visitEsc  = m.equipoVisitante?.escudo;
+  const resultado = m.resultado;
+  const estado    = m.estado || m.status || '';
+  const est       = estado.toLowerCase();
+
   let scores = '<span class="cal-dash">vs</span>';
-  if (marcador && (marcador.local !== undefined || marcador.goles_local !== undefined)) {
-    const gl = marcador.local ?? marcador.goles_local ?? '-';
-    const gv = marcador.visitante ?? marcador.goles_visitante ?? '-';
-    scores = `<span class="cal-score">${gl}</span><span class="cal-dash">-</span><span class="cal-score">${gv}</span>`;
+  if (resultado && resultado.local !== undefined && resultado.visitante !== undefined) {
+    scores = `<span class="cal-score">${resultado.local}</span><span class="cal-dash">-</span><span class="cal-score">${resultado.visitante}</span>`;
   }
-  const est = (estado || '').toLowerCase();
+
   let statusBadge = '';
-  if (est.includes('viv') || est.includes('live') || est.includes("'")) {
+  if (m.esEnVivo || est.includes('viv') || est.includes('live')) {
     statusBadge = `<span class="cal-status status-live">⚡ EN VIVO</span>`;
-  } else if (est.includes('fin') || est.includes('term') || est.includes('ft')) {
+  } else if (est.includes('final') || est.includes('term') || est === 'ft') {
     statusBadge = `<span class="cal-status status-finished">FT</span>`;
   } else {
-    statusBadge = `<span class="cal-status status-upcoming">${m.hora || m.time || 'Próximo'}</span>`;
+    statusBadge = `<span class="cal-status status-upcoming">${m.hora || 'Próximo'}</span>`;
   }
+
+  const logoLocal     = localEsc
+    ? `<img src="${localEsc}" class="cal-logo" alt="${local}" onerror="this.style.display='none'">`
+    : teamLogoHTML(local, 'sm');
+  const logoVisitante = visitEsc
+    ? `<img src="${visitEsc}" class="cal-logo" alt="${visitante}" onerror="this.style.display='none'">`
+    : teamLogoHTML(visitante, 'sm');
+
   return `
     <div class="cal-card">
       <div class="cal-team">
-        ${teamLogoHTML(local, 'sm')}
+        ${logoLocal}
         <span class="cal-team-name">${local}</span>
       </div>
       <div class="cal-center">
@@ -347,7 +373,7 @@ function renderCalMatch(m) {
         ${statusBadge}
       </div>
       <div class="cal-team away">
-        ${teamLogoHTML(visitante, 'sm')}
+        ${logoVisitante}
         <span class="cal-team-name">${visitante}</span>
       </div>
     </div>`;
@@ -357,11 +383,16 @@ function renderCalMatch(m) {
 function buildProgolMatches(calendario, tablaJson) {
   const container = $('progolMatches');
   if (calendario && calendario.length > 0) {
-    matchesForProgol = calendario.slice(0, 14).map((m, i) => ({
-      id: i,
-      local: m.local || m.equipo_local || `Equipo ${i * 2 + 1}`,
-      visitante: m.visitante || m.equipo_visitante || `Equipo ${i * 2 + 2}`,
-      jornada: m.jornada || '—', hora: m.hora || m.time || '', fecha: m.fecha || '',
+    // Use upcoming matches only (not finalized) with correct API field names
+    const upcoming = calendario.filter(m => !m.esEnVivo && m.estado !== 'Finalizado');
+    const source   = upcoming.length >= 9 ? upcoming : calendario;
+    matchesForProgol = source.slice(0, 9).map((m, i) => ({
+      id:        i,
+      local:     m.equipoLocal?.nombre     || m.local     || m.equipo_local     || `Equipo ${i * 2 + 1}`,
+      visitante: m.equipoVisitante?.nombre || m.visitante || m.equipo_visitante || `Equipo ${i * 2 + 2}`,
+      jornada:   m.jornada || 'prox',
+      hora:      m.hora  || '',
+      fecha:     m.fecha || '',
     }));
   } else if (tablaJson && tablaJson.tabla && tablaJson.tabla.length >= 2) {
     const equipos = tablaJson.tabla.map(t => t.equipo);
